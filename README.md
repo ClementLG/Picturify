@@ -1,4 +1,19 @@
-# Picturify
+<h1 align="center">Picturify</h1>
+
+<p align="center">
+    <img src="https://img.shields.io/badge/Python-3.11+-blue.svg" alt="Python">
+    <img src="https://img.shields.io/badge/-Flask-grey?style=flat&logo=flask" alt="Flask">
+    <img src="https://img.shields.io/badge/-Docker-grey?logo=docker" alt="Docker">
+  <a href="https://github.com/ClementLG/Picturify/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/ClementLG/Picturify" alt="License">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://www.buymeacoffee.com/clementlg">
+    <img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee">
+  </a>
+</p>
 
 > **Analyze, understand, and purify your images.**
 
