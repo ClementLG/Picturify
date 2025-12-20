@@ -83,7 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const addBtn = document.getElementById('add-field-btn');
     const container = document.getElementById('custom-fields-container');
 
-    // List of supported tags matching backend 'tag_db'
+    // List of supported tags for logical suggestions, but now we support arbitrary inputs
+    // This array isn't strictly needed for the dropdown generation anymore, effectively replaced by html datalist
     const supportedTags = [
         'Make', 'Model', 'Software', 'DateTime',
         'HostComputer', 'UserComment', 'LensMake',
@@ -93,44 +94,41 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addBtn && container) {
         addBtn.addEventListener('click', () => {
             const fieldDiv = document.createElement('div');
-            fieldDiv.className = 'field';
-
-            // Dropdown for Key
-            let options = supportedTags.map(tag => `<option value="${tag}">${tag}</option>`).join('');
+            // Using Bulma field with addons
+            fieldDiv.className = 'field has-addons mb-2';
 
             fieldDiv.innerHTML = `
-                <div class="field has-addons">
-                    <div class="control">
-                        <span class="select">
-                        <select class="tag-selector">
-                            ${options}
-                        </select>
-                        </span>
-                    </div>
-                    <div class="control is-expanded">
-                        <input class="input tag-value" type="text" placeholder="Value">
-                    </div>
-                    <div class="control">
-                        <button class="button is-danger is-outlined delete-row" type="button">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
+                <div class="control">
+                    <input class="input tag-key" type="text" list="tag-suggestions" placeholder="Tag Name (e.g. Model)">
+                </div>
+                <div class="control is-expanded">
+                    <input class="input tag-value" type="text" placeholder="Value">
+                </div>
+                <div class="control">
+                    <button class="button is-danger is-outlined delete-row" type="button">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
             `;
 
             container.appendChild(fieldDiv);
 
             // Add event listeners for this row
-            const selector = fieldDiv.querySelector('.tag-selector');
-            const input = fieldDiv.querySelector('.tag-value');
+            const keyInput = fieldDiv.querySelector('.tag-key');
+            const valueInput = fieldDiv.querySelector('.tag-value');
             const deleteBtn = fieldDiv.querySelector('.delete-row');
 
-            // Initialize name
-            input.name = selector.value;
+            // Logic: The backend needs name="TagName" value="Value".
+            // We set the name attribute of the valueInput to be the value of keyInput.
 
-            selector.addEventListener('change', () => {
-                input.name = selector.value;
-            });
+            const updateName = () => {
+                if (keyInput.value) {
+                    valueInput.name = keyInput.value;
+                }
+            };
+
+            keyInput.addEventListener('input', updateName);
+            keyInput.addEventListener('change', updateName);
 
             deleteBtn.addEventListener('click', () => {
                 container.removeChild(fieldDiv);
