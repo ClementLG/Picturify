@@ -8,7 +8,7 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
     
     # Security Plugins
-    CSRFProtect(app)
+    csrf = CSRFProtect(app)
     # Enable Security Headers, but disable CSP (to allow inline scripts/styles) and HTTPS redirect (for local/proxy compatibility)
     Talisman(app, content_security_policy=None, force_https=False) 
 
@@ -18,6 +18,7 @@ def create_app(config_class=Config):
     app.register_blueprint(main_blueprint)
 
     from app.api import api as api_blueprint
+    csrf.exempt(api_blueprint)
     app.register_blueprint(api_blueprint, url_prefix='/api/v1')
 
     return app

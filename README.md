@@ -10,28 +10,7 @@ It features a polished, responsive web interface based on **Bulma** with custom 
 
 ---
 
-## 2. Tech Stack
-
-### Backend
-- **Language:** Python 3.11+
-- **Web Framework:** Flask (lightweight, extensible)
-- **Image Processing:**
-  - **Pillow (PIL):** Basic image manipulation
-  - **piexif:** Advanced reading/writing of EXIF metadata
-
-### Frontend
-- **Structure:** HTML5 / Jinja2
-- **Style:** [Bulma CSS](https://bulma.io/) + Custom CSS (Animations, Gradients, Responsive Design)
-- **Interactivity:** Vanilla JavaScript (ES6+) for Drag & Drop, Dynamic Forms, and Mobile Menu.
-- **Icons:** FontAwesome
-
-### Infrastructure (DevOps)
-- **Containerization:** Docker (to create a portable image of the app)
-- **Orchestration:** Docker Compose (simplify running the app with a single command)
-
----
-
-## 3. Key Features
+## 2. Key Features
 
 ### Homepage & Upload
 - **Interface:** Modern Hero section with entrance animations.
@@ -40,120 +19,113 @@ It features a polished, responsive web interface based on **Bulma** with custom 
 
 ### Analysis & Dashboard ("Analyze" Mode)
 - **Layout:** Responsive 2-column dashboard (Image preview + Data editor).
+- **Interactive Map:** Visualize GPS coordinates directly on a Leaflet map.
 - **Data Categorization:**
-  - 📍 **Location:** GPS Latitude/Longitude.
+  - 📍 **Location:** GPS Latitude/Longitude (editable via map).
   - 📷 **Device:** Model, Brand, Lens.
-  - ⚙️ **Technical:** ISO, Aperture, Shutter Speed.
-  - 📅 **Temporal:** Date taken, Date modified.
+  - 📅 **Temporal:** Date taken.
 
 ### Advanced Data Editing ("Understand & Edit" Mode)
 - **Standard Fields:** Easy edit for Artist, Copyright, and Description.
-- **Custom Fields:** Dynamic form to add specific EXIF tags (Make, Model, Lens, DateTime, etc.) from a supported list.
-- **Validation:** Ensures tags are written to the correct IFD group.
+- **GPS Editor:** Click on the map to set or modify location data.
+- **Custom Fields:** Dynamic form to add specific EXIF tags based on the standard.
 
 ### Purification ("Purify" Mode)
-- **"Purify All" Button:** Removes **all** metadata to anonymize the image.
-- **Download:** Dedicated button to download the processed image at any time.
+- **"Purify & Clean" Button:** Removes **all** metadata to anonymize the image and immediately prompts for download.
+- **Smart Workflow:** Optimized flow to download and offer to "Finish" (delete from server) or "Continue Editing".
 
-### Export / Download
-- Generate download link for the modified/purified image.
-- Automatic cleanup of files on the server (background task).
-
-### REST API Integration
-The application exposes a RESTful API (JSON) for third-party integration.
-- `POST /api/v1/analyze`: Returns extraction EXIF tags.
-- `POST /api/v1/purify`: Returns binary image with stripped metadata.
-- `POST /api/v1/edit`: Accepts image + JSON tags to modify.
+### Security & Privacy
+- **Automatic Cleanup:** Files older than 1 hour (configurable) are automatically deleted.
+- **Strict Validation:** Magic number checks and PIL verification for all uploads.
+- **CSRF Protection:** Full protection against Cross-Site Request Forgery.
+- **Security Headers:** HSTS, X-Content-Type-Options, etc., via Flask-Talisman.
+- **Path Traversal Protection:** Secure filename handling.
 
 ---
 
-## 4. Code Architecture
+## 3. Installation and Setup
 
-The project follows the Flask "Application Factory" pattern with a clear MVC (Model View Controller) separation.
-
-```text
-picturify/
-├── app/
-│   ├── __init__.py          # App initialization
-│   ├── main/                # Web routes
-│   │   ├── __init__.py
-│   │   └── routes.py        # Controllers
-│   ├── api/                 # API Blueprint
-│   │   ├── __init__.py
-│   │   └── endpoints.py     # JSON endpoints
-│   ├── services/            # Business logic
-│   │   ├── __init__.py
-│   │   ├── image_handler.py # Upload/save/cleanup
-│   │   └── exif_manager.py  # EXIF logic (Pillow/piexif)
-│   ├── static/
-│   │   ├── css/             # Custom styles (Modern UI)
-│   │   ├── js/              # Scripts (Drag&Drop, UI Logic)
-│   │   └── uploads/         # Temporary folder
-│   └── templates/           # Jinja2 Views
-├── config.py                # Configuration
-├── requirements.txt         # Dependencies
-├── Dockerfile               # Docker build
-├── docker-compose.yml       # Docker Compose
-└── run.py
-```
-
----
-
-## 5. Design System
-
-- **Modern Palette:** Indigo & Pink gradients.
-- **Components:** Card-based layout with soft shadows and "Glassmorphism" touches.
-- **Animations:** Fade-in entrance effects for a premium feel.
-- **Responsiveness:** Fully adapted for Mobile, Tablet, and Desktop.
-
----
-
-## 6. Installation and Setup
-
-### Option A: Docker (Recommended)
+### Docker (Recommended)
 *Prerequisites: Docker Engine, Docker Compose*
 
 1. **Clone and run:**
    ```bash
    git clone https://github.com/ClementLG/Picturify.git
    cd Picturify
-   docker-compose up --build -d
+   docker compose up --build
    ```
 2. **Access:** Navigate to `http://localhost:5000`.
-3. **Stop:**
-   ```bash
-   docker-compose down
-   ```
 
-### Option B: Local Python Installation
-*Prerequisites: Python 3.11+, pip*
+### Environment Configuration
+You can control the running mode via the `FLASK_ENV` environment variable in `docker-compose.yml`:
 
-```bash
-# Clone the project
-git clone https://github.com/ClementLG/Picturify.git
-cd Picturify
+- **Production (Default):** Uses **Gunicorn** with 4 workers. Optimized for performance and concurrency.
+  ```yaml
+  environment:
+    - FLASK_ENV=production
+  ```
+- **Development:** Uses `python run.py` with Debug Mode and Hot Reload.
+  ```yaml
+  environment:
+    - FLASK_ENV=development
+  ```
 
-# Create virtual environment
-python -m venv venv
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-# source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run
-python run.py
-```
+### Configuration (config.py)
+Adjustable settings:
+- `MAX_CONTENT_LENGTH`: Max upload size (default 25 MB).
+- `MAX_STORED_FILES`: Max files stored before oldest are deleted.
+- `CLEANUP_PROBABILITY` & `MAX_FILE_AGE_SECONDS`: Tunable garbage collection parameters.
 
 ---
 
-## 7. Security & Limitations
-- **File Validation:** Strict extension checking (no .exe, .php, etc).
-- **Upload Limit:** Configurable max size (default: 16 MB).
-- **Privacy:** Automatic cleanup of uploaded files.
+## 4. API Documentation
 
-## 8. Future Improvements
-- [ ] Batch processing support.
-- [ ] Embedded interactive map for GPS data (LeafletJS).
+Picturify exposes a RESTful API for integration.
+
+**Base URL:** `/api/v1`
+
+### 1. Analyze Image
+Extracts metadata from an uploaded image.
+
+- **Endpoint:** `POST /analyze`
+- **Body (Multipart/Form-Data):**
+  - `image`: The image file.
+- **Response (JSON):**
+  ```json
+  {
+      "filename": "uuid_original.jpg",
+      "exif_data": {
+          "Model": "iPhone 12",
+          "GPSInfo": {...}
+      }
+  }
+  ```
+
+### 2. Purify Image
+Removes all EXIF metadata and returns the cleaned image.
+
+- **Endpoint:** `POST /purify`
+- **Body (Multipart/Form-Data):**
+  - `image`: The image file.
+- **Response:** Binary image file (JPEG/PNG) without metadata.
+- **Note:** The server deletes the file immediately after processing to conserve space.
+
+---
+
+## 5. Tech Stack
+
+### Backend
+- **Python 3.11+**
+- **Flask:** Web Framework.
+- **Gunicorn:** Production WSGI Server.
+- **Pillow / Piexif:** Image & Metadata processing.
+
+### Frontend
+- **Bulma CSS:** Responsive UI.
+- **Leaflet.js:** Interactive Maps.
+- **Vanilla JS:** Dynamic interactions.
+
+---
+
+## 6. License
+[GPLv3](LICENSE)

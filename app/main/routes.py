@@ -135,11 +135,6 @@ def edit(filename):
     # as the ExifManager filters by its 'tag_db' anyway.
     for key, value in request.form.items():
         if value and key not in ['csrf_token']: # exclude internal flask-wtf tokens if any
-             # Map form names (lowercase) to Titular Case if needed? 
-             # Actually our form will send correct keys like 'Artist' or 'Model'
-             # For the hardcoded inputs in the template, we need to make sure they match the tag_db keys.
-             # In prev step we had 'artist', 'copyright'. Let's normalize or fix the template.
-             # Better strategy: Fix the template to send 'Artist', 'Copyright' as names.
              changes[key] = value
 
     # Fix case for default fields if they come in lowercase (backward compatibility)
