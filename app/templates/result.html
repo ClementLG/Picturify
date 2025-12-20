@@ -43,11 +43,10 @@
                                 </form>
                             </div>
                             <div class="column is-12">
-                                <a href="{{ url_for('main.download', filename=filename) }}"
-                                    class="button is-primary is-fullwidth">
+                                <button type="button" class="button is-primary is-fullwidth" id="download-btn">
                                     <span class="icon"><i class="fas fa-download"></i></span>
                                     <span>Download</span>
-                                </a>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -247,6 +246,26 @@
     </div>
 </div>
 
+<div class="modal" id="download-modal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">Download Started</p>
+            <button class="delete" aria-label="close" onclick="closeModal()"></button>
+        </header>
+        <section class="modal-card-body">
+            <p>Your download has started.</p>
+            <p>Do you want to finish this session (delete the file) or continue editing?</p>
+        </section>
+        <footer class="modal-card-foot">
+            <form action="{{ url_for('main.finish', filename=filename) }}" method="POST" style="margin-right: 10px;">
+                <button type="submit" class="button is-danger">Finish Session</button>
+            </form>
+            <button class="button" onclick="closeModal()">Continue Editing</button>
+        </footer>
+    </div>
+</div>
+
 <style>
     /* Local overrides for sticky behavior */
     @media screen and (min-width: 769px) {
@@ -259,68 +278,107 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // ---- Map Logic ----
-        const latStr = "{{ lat if lat else 'null' }}";
-        const lonStr = "{{ lon if lon else 'null' }}";
-        const lat = (latStr === 'null') ? null : parseFloat(latStr);
-        const lon = (lonStr === 'null') ? null : parseFloat(lonStr);
-        const hasLocation = (lat !== null && lon !== null);
+        // ---- Download Logic ----
+        const triggerDownload = {{ trigger_download| tojson
+    }};
+    const downloadUrl = "{{ url_for('main.download', filename=filename) }}";
+    const downloadBtn = document.getElementById('download-btn');
+    const modal = document.getElementById('download-modal');
 
-        // Default view (Paris) if no loc
-        const defaultCenter = [48.8566, 2.3522];
-        const initialCenter = hasLocation ? [lat, lon] : defaultCenter;
-        const initialZoom = 13;
+    function startDownload() {
+        // Create hidden link to trigger download
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = '';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
 
-        // 1. View Map (Only if loc exists or placeholder)
-        if (document.getElementById('view-map') && hasLocation) {
-            const map = L.map('view-map').setView(initialCenter, initialZoom);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(map);
-            L.marker(initialCenter).addTo(map);
+        // Show modal
+        modal.classList.add('is-active');
+    }
+
+    if (triggerDownload) {
+        startDownload();
+    }
+
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            startDownload();
+        });
+    }
+
+    // Expose close modal
+    window.closeModal = function () {
+        modal.classList.remove('is-active');
+    }
+
+    const bg = document.querySelector('.modal-background');
+    if (bg) bg.addEventListener('click', closeModal);
+
+    // ---- Map Logic ----
+    const latStr = "{{ lat if lat else 'null' }}";
+    const lonStr = "{{ lon if lon else 'null' }}";
+    const lat = (latStr === 'null') ? null : parseFloat(latStr);
+    const lon = (lonStr === 'null') ? null : parseFloat(lonStr);
+    const hasLocation = (lat !== null && lon !== null);
+
+    // Default view (Paris) if no loc
+    const defaultCenter = [48.8566, 2.3522];
+    const initialCenter = hasLocation ? [lat, lon] : defaultCenter;
+    const initialZoom = 13;
+
+    // 1. View Map (Only if loc exists or placeholder)
+    if (document.getElementById('view-map') && hasLocation) {
+        const map = L.map('view-map').setView(initialCenter, initialZoom);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+        L.marker(initialCenter).addTo(map);
+    }
+
+    // 2. Edit Map
+    if (document.getElementById('edit-map')) {
+        const editMap = L.map('edit-map').setView(initialCenter, initialZoom);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(editMap);
+
+        let marker = null;
+        if (hasLocation) {
+            marker = L.marker(initialCenter, { draggable: true }).addTo(editMap);
         }
 
-        // 2. Edit Map
-        if (document.getElementById('edit-map')) {
-            const editMap = L.map('edit-map').setView(initialCenter, initialZoom);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(editMap);
+        // Inputs
+        const latInput = document.getElementById('gps_lat');
+        const lonInput = document.getElementById('gps_lon');
 
-            let marker = null;
-            if (hasLocation) {
-                marker = L.marker(initialCenter, { draggable: true }).addTo(editMap);
-            }
+        // Update markers on click
+        editMap.on('click', function (e) {
+            const coord = e.latlng;
+            const newLat = coord.lat.toFixed(6);
+            const newLon = coord.lng.toFixed(6);
 
-            // Inputs
-            const latInput = document.getElementById('gps_lat');
-            const lonInput = document.getElementById('gps_lon');
-
-            // Update markers on click
-            editMap.on('click', function (e) {
-                const coord = e.latlng;
-                const newLat = coord.lat.toFixed(6);
-                const newLon = coord.lng.toFixed(6);
-
-                if (marker) {
-                    marker.setLatLng(coord);
-                } else {
-                    marker = L.marker(coord, { draggable: true }).addTo(editMap);
-                }
-
-                latInput.value = newLat;
-                lonInput.value = newLon;
-            });
-
-            // Update inputs on drag
             if (marker) {
-                marker.on('dragend', function (e) {
-                    const coord = marker.getLatLng();
-                    latInput.value = coord.lat.toFixed(6);
-                    lonInput.value = coord.lng.toFixed(6);
-                });
+                marker.setLatLng(coord);
+            } else {
+                marker = L.marker(coord, { draggable: true }).addTo(editMap);
             }
+
+            latInput.value = newLat;
+            lonInput.value = newLon;
+        });
+
+        // Update inputs on drag
+        if (marker) {
+            marker.on('dragend', function (e) {
+                const coord = marker.getLatLng();
+                latInput.value = coord.lat.toFixed(6);
+                lonInput.value = coord.lng.toFixed(6);
+            });
         }
+    }
     });
 </script>
 {% endblock %}

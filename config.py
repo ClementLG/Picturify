@@ -5,6 +5,9 @@ class Config:
     UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'app', 'static', 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload size
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'tiff', 'webp'}
+    MAX_STORED_FILES = 100
+    CLEANUP_PROBABILITY = 0.5
+    MAX_FILE_AGE_SECONDS = 60
 
     @staticmethod
     def init_app(app):

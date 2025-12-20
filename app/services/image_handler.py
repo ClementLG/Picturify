@@ -15,6 +15,8 @@ class ImageHandler:
         if not file or not ImageHandler.allowed_file(file.filename):
             return None
         
+        ImageHandler.enforce_storage_limit()
+        
         filename = secure_filename(file.filename)
         # Create a unique filename to avoid collisions
         unique_filename = f"{uuid.uuid4().hex}_{filename}"
@@ -30,6 +32,50 @@ class ImageHandler:
     @staticmethod
     def get_path(filename):
         return os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+
+    @staticmethod
+    def delete_file(filename):
+        if not filename: return
+        file_path = ImageHandler.get_path(filename)
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                print(f"Error deleting file {filename}: {e}")
+
+    @staticmethod
+    def enforce_storage_limit():
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        max_files = current_app.config.get('MAX_STORED_FILES', 100)
+        
+        if not os.path.exists(upload_folder):
+            return
+
+        # List all files with full path
+        files = []
+        for f in os.listdir(upload_folder):
+            fp = os.path.join(upload_folder, f)
+            if os.path.isfile(fp):
+                files.append(fp)
+        
+        # If we are strictly below or equal limit, do nothing
+        if len(files) < max_files:
+            return
+            
+        # Sort by modification time (oldest first)
+        files.sort(key=os.path.getmtime)
+        
+        # Calculate how many to remove. 
+        # We want to remove enough so that after adding 1 new file, we are still within limit.
+        # But broadly, if current >= max, remove (current - max + 1)
+        num_to_remove = len(files) - max_files + 1
+        
+        for i in range(num_to_remove):
+            try:
+                os.remove(files[i])
+                print(f"Removed old file: {files[i]} due to storage limit.")
+            except Exception as e:
+                print(f"Error removing old file {files[i]}: {e}")
 
     @staticmethod
     def cleanup_old_files(max_age_seconds=3600):

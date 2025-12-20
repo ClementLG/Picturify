@@ -3,10 +3,22 @@ from app.main import main
 from app.services.image_handler import ImageHandler
 from app.services.exif_manager import ExifManager
 import os
+import random
+
+def trigger_bg_cleanup():
+    # Cleanup files older than configured age with configured probability
+    prob = current_app.config.get('CLEANUP_PROBABILITY', 0.2)
+    max_age = current_app.config.get('MAX_FILE_AGE_SECONDS', 3600)
+    
+    if random.random() < prob:
+        ImageHandler.cleanup_old_files(max_age)
 
 @main.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
+        # Cleanup check
+        trigger_bg_cleanup()
+
         if 'image' not in request.files:
             flash('No file part')
             return redirect(request.url)
@@ -45,7 +57,9 @@ def result(filename):
     # Check for specific interesting fields
     gps_info = exif_data.get('GPSInfo')
     
-    return render_template('result.html', filename=filename, exif_data=exif_data, gps_info=gps_info, lat=lat, lon=lon)
+    trigger_download = request.args.get('download') == 'true'
+    
+    return render_template('result.html', filename=filename, exif_data=exif_data, gps_info=gps_info, lat=lat, lon=lon, trigger_download=trigger_download)
 
 @main.route('/download/<filename>')
 def download(filename):
@@ -56,6 +70,7 @@ def download(filename):
 
 @main.route('/delete_selected/<filename>', methods=['POST'])
 def delete_selected(filename):
+    trigger_bg_cleanup()
     file_path = ImageHandler.get_path(filename)
     if not file_path or not os.path.exists(file_path):
         flash("File not found.")
@@ -67,6 +82,8 @@ def delete_selected(filename):
         modified_path = ExifManager.delete_tags(file_path, selected_tags)
         if modified_path:
              modified_filename = os.path.basename(modified_path)
+             if modified_filename != filename:
+                 ImageHandler.delete_file(filename)
              flash(f"Deleted {len(selected_tags)} tags successfully.")
              return redirect(url_for('main.result', filename=modified_filename))
         else:
@@ -78,6 +95,7 @@ def delete_selected(filename):
 
 @main.route('/purify/<filename>', methods=['POST'])
 def purify(filename):
+    trigger_bg_cleanup()
     file_path = ImageHandler.get_path(filename)
     if not os.path.exists(file_path):
         flash('File not found')
@@ -85,16 +103,25 @@ def purify(filename):
     
     purified_path = ExifManager.remove_exif(file_path)
     if purified_path:
-        # For simplicity, we redirect to download the purified file directly or show a success page
-        # Here lets redirect to a download of the *new* file
         purified_filename = os.path.basename(purified_path)
-        return redirect(url_for('main.download', filename=purified_filename))
+        if purified_filename != filename:
+            ImageHandler.delete_file(filename)
+
+        # Redirect to result with download trigger
+        return redirect(url_for('main.result', filename=purified_filename, download='true'))
     
     flash('Error processing file')
     return redirect(url_for('main.result', filename=filename))
 
+@main.route('/finish/<filename>', methods=['POST'])
+def finish(filename):
+    ImageHandler.delete_file(filename)
+    flash('Session finished. File cleanup completed.')
+    return redirect(url_for('main.index'))
+
 @main.route('/edit/<filename>', methods=['POST'])
 def edit(filename):
+    trigger_bg_cleanup()
     file_path = ImageHandler.get_path(filename)
     if not os.path.exists(file_path):
         flash('File not found')
@@ -128,6 +155,9 @@ def edit(filename):
     
     if modified_path:
         modified_filename = os.path.basename(modified_path)
+        if modified_filename != filename:
+            ImageHandler.delete_file(filename)
+            
         flash('Metadata updated successfully!')
         return redirect(url_for('main.result', filename=modified_filename))
     
