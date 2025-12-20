@@ -26,6 +26,10 @@ def index():
 
     return render_template('index.html')
 
+@main.route('/about')
+def about():
+    return render_template('about.html')
+
 @main.route('/result/<filename>')
 def result(filename):
     file_path = ImageHandler.get_path(filename)

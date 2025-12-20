@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container fade-in-up">
+    <!-- Header -->
+    <div class="level mb-5">
+        <div class="level-left">
+            <a href="{{ url_for('main.index') }}" class="button is-white has-text-grey">
+                <span class="icon"><i class="fas fa-arrow-left"></i></span>
+                <span>Back</span>
+            </a>
+        </div>
+        <div class="level-right">
+            <h2 class="title is-4 has-text-grey-dark">About Picturify</h2>
+        </div>
+    </div>
+
+    <div class="columns is-centered">
+        <div class="column is-8">
+
+            <!-- Intro Card -->
+            <div class="card mb-5">
+                <div class="card-content">
+                    <h3 class="title is-4 has-text-primary">
+                        <span class="icon mr-2"><i class="fas fa-layer-group"></i></span>
+                        What is EXIF Data?
+                    </h3>
+                    <div class="content">
+                        <p>
+                            <strong>EXIF (Exchangeable Image File Format)</strong> is a standard that specifies the
+                            formats for images, sound, and ancillary tags used by digital cameras and smartphones.
+                        </p>
+                        <p>
+                            When you take a photo, your device automatically embeds hidden data inside the file. This
+                            can include:
+                        </p>
+                        <ul>
+                            <li><strong>GPS Coordinates:</strong> The exact location where the photo was taken
+                                (Latitude, Longitude).</li>
+                            <li><strong>Device Information:</strong> Camera make, model, lens type, and software
+                                version.</li>
+                            <li><strong>Settings:</strong> Shutter speed, ISO, aperture, flash usage.</li>
+                            <li><strong>Timestamps:</strong> The precise date and time of capture.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Privacy Card -->
+            <div class="card mb-5">
+                <div class="card-content">
+                    <h3 class="title is-4 has-text-info">
+                        <span class="icon mr-2"><i class="fas fa-user-shield"></i></span>
+                        Why Clean Your Metadata?
+                    </h3>
+                    <div class="content">
+                        <p>
+                            While useful for photographers, this data can pose a <strong>privacy risk</strong> when
+                            shared online.
+                        </p>
+                        <blockquote class="is-info">
+                            Sharing a photo on social media or messaging apps could unintentionally reveal your home
+                            address, workplace, or daily routines through embedded GPS data.
+                        </blockquote>
+                        <p>
+                            Picturify helps you "scrub" this information, ensuring your shared images contain only the
+                            visual content and nothing else.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Disclaimer Card -->
+            <div class="card" style="border-left: 4px solid #f14668;">
+                <div class="card-content">
+                    <h3 class="title is-4 has-text-danger">
+                        <span class="icon mr-2"><i class="fas fa-exclamation-triangle"></i></span>
+                        Disclaimer of Liability
+                    </h3>
+                    <div class="content is-small has-text-grey">
+                        <p>
+                            **Picturify is provided "as is", without warranty of any kind, express or implied.**
+                        </p>
+                        <p>
+                            By using this service, you acknowledge and agree that:
+                        </p>
+                        <ol>
+                            <li>The author (ClementLG) and contributors shall not be held liable for any claim, damages,
+                                or other liability arising from the use of this software.</li>
+                            <li>We do not guarantee that all metadata will be successfully detected or removed in every
+                                possible image format or edge case.</li>
+                            <li>Uploaded files are processed automatically and stored temporarily for the purpose of the
+                                service, then deleted. We do not inspect or claim ownership of your content.</li>
+                            <li>You are solely responsible for the images you upload and edit.</li>
+                        </ol>
+                        <p class="mt-4">
+                            Please verify your "purified" images before relying on them for sensitive anonymity
+                            purposes.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="has-text-centered mt-6">
+                <p class="is-size-7 has-text-grey-light">Version 1.0.0 &bull; Open Source</p>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
