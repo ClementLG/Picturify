@@ -39,10 +39,13 @@ def result(filename):
     
     exif_data = ExifManager.get_exif_data(file_path)
     
+    # Calculate Lat/Lon for Map
+    lat, lon = ExifManager.get_lat_lon(exif_data)
+    
     # Check for specific interesting fields
     gps_info = exif_data.get('GPSInfo')
     
-    return render_template('result.html', filename=filename, exif_data=exif_data, gps_info=gps_info)
+    return render_template('result.html', filename=filename, exif_data=exif_data, gps_info=gps_info, lat=lat, lon=lon)
 
 @main.route('/download/<filename>')
 def download(filename):

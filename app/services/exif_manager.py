@@ -61,11 +61,58 @@ class ExifManager:
             return None
     
     @staticmethod
+    def get_lat_lon(exif_data):
+        """Returns the latitude and longitude, if available, from the provided exif_data."""
+        lat = None
+        lon = None
+
+        if "GPSInfo" in exif_data:
+            gps_info = exif_data["GPSInfo"]
+
+            gps_latitude = gps_info.get("GPSLatitude")
+            gps_latitude_ref = gps_info.get("GPSLatitudeRef")
+            gps_longitude = gps_info.get("GPSLongitude")
+            gps_longitude_ref = gps_info.get("GPSLongitudeRef")
+
+            if gps_latitude and gps_latitude_ref and gps_longitude and gps_longitude_ref:
+                lat = ExifManager._convert_to_degrees(gps_latitude)
+                if gps_latitude_ref != "N":
+                    lat = -lat
+
+                lon = ExifManager._convert_to_degrees(gps_longitude)
+                if gps_longitude_ref != "E":
+                    lon = -lon
+        return lat, lon
+
+    @staticmethod
+    def _convert_to_degrees(value):
+        """
+        Helper function to convert the GPS coordinates stored in the EXIF to degress in float format
+        """
+        d = float(value[0])
+        m = float(value[1])
+        s = float(value[2])
+        return d + (m / 60.0) + (s / 3600.0)
+    
+    @staticmethod
+    def _convert_to_dms(value):
+        """
+        Helper function to convert float degrees to EXIF DMS format (rational tuples).
+        """
+        value = abs(value)
+        d = int(value)
+        m = int((value - d) * 60)
+        s = (value - d - m/60) * 3600
+        # return tuples of (numerator, denominator)
+        # precision: 1/100 for seconds
+        return ((d, 1), (m, 1), (int(s * 100), 100))
+
+    @staticmethod
     def modify_exif(source_path, changes, dest_path=None):
         """
         Modifies specific EXIF tags.
         'changes' is a dict of tag names (str) and new values (str).
-        Now supports arbitrary tags if they are valid EXIF names.
+        Now supports 'gps_lat' and 'gps_lon' (floats/strings).
         """
         if dest_path is None:
             dir_name, file_name = os.path.split(source_path)
@@ -88,6 +135,29 @@ class ExifManager:
             for key, value in changes.items():
                 if not value: continue
                 
+                # Special GPS Handling
+                if key == 'gps_lat':
+                    try:
+                        lat = float(value)
+                        ref = 'N' if lat >= 0 else 'S'
+                        dms = ExifManager._convert_to_dms(lat)
+                        exif_dict["GPS"][piexif.GPSIFD.GPSLatitude] = dms
+                        exif_dict["GPS"][piexif.GPSIFD.GPSLatitudeRef] = ref.encode('ascii')
+                    except Exception as e:
+                        print(f"Error processing GPS Lat: {e}")
+                    continue
+                
+                if key == 'gps_lon':
+                    try:
+                        lon = float(value)
+                        ref = 'E' if lon >= 0 else 'W'
+                        dms = ExifManager._convert_to_dms(lon)
+                        exif_dict["GPS"][piexif.GPSIFD.GPSLongitude] = dms
+                        exif_dict["GPS"][piexif.GPSIFD.GPSLongitudeRef] = ref.encode('ascii')
+                    except Exception as e:
+                        print(f"Error processing GPS Lon: {e}")
+                    continue
+
                 group, tag_id = ExifManager._find_tag_info(key)
                 
                 if group and tag_id:

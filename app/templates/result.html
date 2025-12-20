@@ -54,22 +54,24 @@
                 </div>
             </div>
 
-            {% if gps_info %}
+            <!-- View Map Card -->
             <div class="card mt-4 fade-in-up delay-100">
                 <header class="card-header">
                     <p class="card-header-title has-text-primary">
-                        <span class="icon mr-2"><i class="fas fa-map-marker-alt"></i></span>
+                        <span class="icon mr-2"><i class="fas fa-map-marked-alt"></i></span>
                         GPS Location
                     </p>
                 </header>
-                <div class="card-content">
-                    <div class="content is-size-7">
-                        <pre style="background: transparent; padding: 0;">{{ gps_info }}</pre>
-                        <!-- In the future: Add Google Maps Link -->
+                <div class="card-content p-0">
+                    <div id="view-map" style="height: 250px; width: 100%;"></div>
+                    {% if not lat or not lon %}
+                    <div class="p-4 has-text-centered has-text-grey is-size-7">
+                        No GPS data found. Use the editor to add location.
                     </div>
+                    {% endif %}
                 </div>
             </div>
-            {% endif %}
+
         </div>
 
         <!-- Right Column: Data & Edit -->
@@ -136,6 +138,33 @@
                 </header>
                 <div class="card-content">
                     <form action="{{ url_for('main.edit', filename=filename) }}" method="POST" id="edit-form">
+
+                        <!-- Map Editor Section -->
+                        <div class="mb-5">
+                            <label class="label is-small">Geolocation (Click map to set)</label>
+                            <div class="field has-addons">
+                                <p class="control">
+                                    <a class="button is-static is-small">Lat</a>
+                                </p>
+                                <p class="control is-expanded">
+                                    <input class="input is-small" type="text" name="gps_lat" id="gps_lat"
+                                        value="{{ lat if lat else '' }}" placeholder="Latitude">
+                                </p>
+                                <p class="control">
+                                    <a class="button is-static is-small">Lon</a>
+                                </p>
+                                <p class="control is-expanded">
+                                    <input class="input is-small" type="text" name="gps_lon" id="gps_lon"
+                                        value="{{ lon if lon else '' }}" placeholder="Longitude">
+                                </p>
+                            </div>
+                            <div id="edit-map"
+                                style="height: 300px; width: 100%; border-radius: 4px; border: 1px solid #dbdbdb;">
+                            </div>
+                            <p class="help">Click anywhere on the map to place/move the marker.</p>
+                        </div>
+
+                        <hr style="background-color: #f1f5f9; height: 1px;">
 
                         <div class="columns">
                             <div class="column is-6">
@@ -227,4 +256,71 @@
         }
     }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // ---- Map Logic ----
+        const latStr = "{{ lat if lat else 'null' }}";
+        const lonStr = "{{ lon if lon else 'null' }}";
+        const lat = (latStr === 'null') ? null : parseFloat(latStr);
+        const lon = (lonStr === 'null') ? null : parseFloat(lonStr);
+        const hasLocation = (lat !== null && lon !== null);
+
+        // Default view (Paris) if no loc
+        const defaultCenter = [48.8566, 2.3522];
+        const initialCenter = hasLocation ? [lat, lon] : defaultCenter;
+        const initialZoom = 13;
+
+        // 1. View Map (Only if loc exists or placeholder)
+        if (document.getElementById('view-map') && hasLocation) {
+            const map = L.map('view-map').setView(initialCenter, initialZoom);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+            L.marker(initialCenter).addTo(map);
+        }
+
+        // 2. Edit Map
+        if (document.getElementById('edit-map')) {
+            const editMap = L.map('edit-map').setView(initialCenter, initialZoom);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(editMap);
+
+            let marker = null;
+            if (hasLocation) {
+                marker = L.marker(initialCenter, { draggable: true }).addTo(editMap);
+            }
+
+            // Inputs
+            const latInput = document.getElementById('gps_lat');
+            const lonInput = document.getElementById('gps_lon');
+
+            // Update markers on click
+            editMap.on('click', function (e) {
+                const coord = e.latlng;
+                const newLat = coord.lat.toFixed(6);
+                const newLon = coord.lng.toFixed(6);
+
+                if (marker) {
+                    marker.setLatLng(coord);
+                } else {
+                    marker = L.marker(coord, { draggable: true }).addTo(editMap);
+                }
+
+                latInput.value = newLat;
+                lonInput.value = newLon;
+            });
+
+            // Update inputs on drag
+            if (marker) {
+                marker.on('dragend', function (e) {
+                    const coord = marker.getLatLng();
+                    latInput.value = coord.lat.toFixed(6);
+                    lonInput.value = coord.lng.toFixed(6);
+                });
+            }
+        }
+    });
+</script>
 {% endblock %}
