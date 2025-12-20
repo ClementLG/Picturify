@@ -77,37 +77,53 @@
 
             <!-- Metadata Visualizer -->
             <div class="card mb-6 fade-in-up delay-100">
-                <header class="card-header" style="box-shadow: none; border-bottom: 1px solid #f1f5f9;">
-                    <p class="card-header-title">
-                        <span class="icon mr-2 has-text-info"><i class="fas fa-list-ul"></i></span>
-                        Metadata Viewer
-                    </p>
-                </header>
-                <div class="card-content">
-                    {% if exif_data %}
-                    <div class="table-container" style="max-height: 300px; overflow-y: auto;">
-                        <table class="table is-hoverable is-fullwidth">
-                            <tbody>
-                                {% for key, value in exif_data.items() %}
-                                {% if key not in ['GPSInfo', 'MakerNote', 'UserComment', 'Thinking'] %}
-                                <tr>
-                                    <td class="has-text-grey is-size-7" style="width: 30%;">{{ key }}</td>
-                                    <td class="has-text-weight-medium is-size-7 font-monospace"
-                                        style="word-break: break-all;">
-                                        {{ value|string|truncate(100) }}
-                                    </td>
-                                </tr>
-                                {% endif %}
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                <form action="{{ url_for('main.delete_selected', filename=filename) }}" method="POST">
+                    <header class="card-header level"
+                        style="box-shadow: none; border-bottom: 1px solid #f1f5f9; padding-right: 1rem;">
+                        <p class="card-header-title level-left">
+                            <span class="icon mr-2 has-text-info"><i class="fas fa-list-ul"></i></span>
+                            Metadata Viewer
+                        </p>
+                        <div class="level-right">
+                            <button type="submit" class="button is-small is-danger is-outlined"
+                                title="Delete selected tags">
+                                <span class="icon is-small"><i class="fas fa-trash-alt"></i></span>
+                                <span>Delete Selected</span>
+                            </button>
+                        </div>
+                    </header>
+                    <div class="card-content">
+                        {% if exif_data %}
+                        <div class="table-container" style="max-height: 300px; overflow-y: auto;">
+                            <table class="table is-hoverable is-fullwidth">
+                                <tbody>
+                                    {% for key, value in exif_data.items() %}
+                                    {% if key not in ['GPSInfo', 'MakerNote', 'UserComment', 'Thinking'] %}
+                                    <tr>
+                                        <td style="width: 40px; vertical-align: middle;">
+                                            <label class="checkbox">
+                                                <input type="checkbox" name="selected_tags" value="{{ key }}">
+                                            </label>
+                                        </td>
+                                        <td class="has-text-grey is-size-7" style="width: 30%; vertical-align: middle;">
+                                            {{ key }}</td>
+                                        <td class="has-text-weight-medium is-size-7 font-monospace"
+                                            style="word-break: break-all; vertical-align: middle;">
+                                            {{ value|string|truncate(100) }}
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="notification is-light">
+                            No standard EXIF data found.
+                        </div>
+                        {% endif %}
                     </div>
-                    {% else %}
-                    <div class="notification is-light">
-                        No standard EXIF data found.
-                    </div>
-                    {% endif %}
-                </div>
+                </form>
             </div>
 
             <!-- Editor -->

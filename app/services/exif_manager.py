@@ -83,24 +83,12 @@ class ExifManager:
             else:
                 exif_dict = {"0th": {}, "Exif": {}, "GPS": {}, "1st": {}, "thumbnail": None}
 
-            # Helper to find tag ID and Group from Name
-            # We iterate piexif's own mappings to be sure it's supported
-            def find_tag_info(tag_name):
-                # Check 0th IFD (Image)
-                for tag_id, name in piexif.TAGS["Image"].items():
-                    if name["name"] == tag_name:
-                        return "0th", tag_id
-                # Check Exif IFD
-                for tag_id, name in piexif.TAGS["Exif"].items():
-                    if name["name"] == tag_name:
-                        return "Exif", tag_id
-                # Check GPS IFD - ignoring for now as it requires complex value formatting (tuple of rationals)
-                return None, None
-
+            # Helper logic moved to _find_tag_info
+            
             for key, value in changes.items():
                 if not value: continue
                 
-                group, tag_id = find_tag_info(key)
+                group, tag_id = ExifManager._find_tag_info(key)
                 
                 if group and tag_id:
                     # Encoding logic
@@ -142,3 +130,48 @@ class ExifManager:
             except:
                 pass
             return None
+
+    @staticmethod
+    def delete_tags(source_path, tags_to_delete, dest_path=None):
+        """
+        Removes specific EXIF tags from the image.
+        """
+        if dest_path is None:
+            dir_name, file_name = os.path.split(source_path)
+            if not file_name.startswith("formatted_"):
+                 dest_path = os.path.join(dir_name, f"formatted_{file_name}")
+            else:
+                 dest_path = source_path
+
+        try:
+            image = Image.open(source_path)
+            
+            if "exif" in image.info:
+                exif_dict = piexif.load(image.info["exif"])
+            else:
+                return dest_path # No EXIF to delete
+
+            for tag_name in tags_to_delete:
+                group, tag_id = ExifManager._find_tag_info(tag_name)
+                if group and tag_id:
+                    if tag_id in exif_dict[group]:
+                        del exif_dict[group][tag_id]
+            
+            exif_bytes = piexif.dump(exif_dict)
+            image.save(dest_path, exif=exif_bytes)
+            return dest_path
+        except Exception as e:
+            print(f"Error deleting EXIF tags: {e}")
+            return None
+
+    @staticmethod
+    def _find_tag_info(tag_name):
+        # Check 0th IFD (Image)
+        for tag_id, name in piexif.TAGS["Image"].items():
+            if name["name"] == tag_name:
+                return "0th", tag_id
+        # Check Exif IFD
+        for tag_id, name in piexif.TAGS["Exif"].items():
+            if name["name"] == tag_name:
+                return "Exif", tag_id
+        return None, None

@@ -51,6 +51,28 @@ def download(filename):
         return send_file(file_path, as_attachment=True)
     return "File not found", 404
 
+@main.route('/delete_selected/<filename>', methods=['POST'])
+def delete_selected(filename):
+    file_path = ImageHandler.get_path(filename)
+    if not file_path or not os.path.exists(file_path):
+        flash("File not found.")
+        return redirect(url_for('main.index'))
+    
+    selected_tags = request.form.getlist('selected_tags')
+    
+    if selected_tags:
+        modified_path = ExifManager.delete_tags(file_path, selected_tags)
+        if modified_path:
+             modified_filename = os.path.basename(modified_path)
+             flash(f"Deleted {len(selected_tags)} tags successfully.")
+             return redirect(url_for('main.result', filename=modified_filename))
+        else:
+             flash("Error deleting tags.")
+    else:
+        flash("No tags selected.")
+    
+    return redirect(url_for('main.result', filename=filename))
+
 @main.route('/purify/<filename>', methods=['POST'])
 def purify(filename):
     file_path = ImageHandler.get_path(filename)
