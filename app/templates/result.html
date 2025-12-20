@@ -35,6 +35,7 @@
                         <div class="columns is-mobile is-multiline">
                             <div class="column is-12">
                                 <form action="{{ url_for('main.purify', filename=filename) }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                                     <button type="submit" class="button is-danger is-light is-fullwidth"
                                         title="Remove all EXIF data">
                                         <span class="icon"><i class="fas fa-soap"></i></span>
@@ -79,6 +80,7 @@
             <!-- Metadata Visualizer -->
             <div class="card mb-6 fade-in-up delay-100">
                 <form action="{{ url_for('main.delete_selected', filename=filename) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                     <header class="card-header level"
                         style="box-shadow: none; border-bottom: 1px solid #f1f5f9; padding-right: 1rem;">
                         <p class="card-header-title level-left">
@@ -137,6 +139,7 @@
                 </header>
                 <div class="card-content">
                     <form action="{{ url_for('main.edit', filename=filename) }}" method="POST" id="edit-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
                         <!-- Map Editor Section -->
                         <div class="mb-5">
@@ -259,6 +262,7 @@
         </section>
         <footer class="modal-card-foot">
             <form action="{{ url_for('main.finish', filename=filename) }}" method="POST" style="margin-right: 10px;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                 <button type="submit" class="button is-danger">Finish Session</button>
             </form>
             <button class="button" onclick="closeModal()">Continue Editing</button>

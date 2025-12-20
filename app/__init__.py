@@ -1,9 +1,16 @@
 from flask import Flask
 from config import Config
+from flask_wtf.csrf import CSRFProtect
+from flask_talisman import Talisman
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    
+    # Security Plugins
+    CSRFProtect(app)
+    # Enable Security Headers, but disable CSP (to allow inline scripts/styles) and HTTPS redirect (for local/proxy compatibility)
+    Talisman(app, content_security_policy=None, force_https=False) 
 
     config_class.init_app(app)
 

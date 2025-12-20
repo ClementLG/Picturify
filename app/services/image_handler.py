@@ -3,6 +3,8 @@ import uuid
 from werkzeug.utils import secure_filename
 from flask import current_app
 import time
+from PIL import Image
+import imghdr
 
 class ImageHandler:
     @staticmethod
@@ -15,6 +17,17 @@ class ImageHandler:
         if not file or not ImageHandler.allowed_file(file.filename):
             return None
         
+        # Basic Magic Number Check
+        try:
+            header = file.read(512)
+            file.seek(0)
+            if not imghdr.what(None, header):
+                print("Invalid image format (magic number check failed)")
+                return None
+        except Exception as e:
+            print(f"Error reading file header: {e}")
+            return None
+
         ImageHandler.enforce_storage_limit()
         
         filename = secure_filename(file.filename)
@@ -24,6 +37,17 @@ class ImageHandler:
         
         try:
             file.save(file_path)
+            
+            # Deep Verification using PIL
+            try:
+                with Image.open(file_path) as img:
+                    img.verify()
+            except Exception as e:
+                print(f"Invalid image file (PIL verification failed): {e}")
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                return None
+
             return unique_filename
         except Exception as e:
             print(f"Error saving file: {e}")
@@ -31,7 +55,8 @@ class ImageHandler:
 
     @staticmethod
     def get_path(filename):
-        return os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+        # Prevent Path Traversal by enforcing secure_filename
+        return os.path.join(current_app.config['UPLOAD_FOLDER'], secure_filename(filename))
 
     @staticmethod
     def delete_file(filename):
