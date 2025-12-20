@@ -8,6 +8,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
+
 ENV FLASK_APP=run.py
 
-CMD ["python", "run.py"]
+ENTRYPOINT ["./entrypoint.sh"]
