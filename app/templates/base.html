@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
 </head>
 
-<body>
+<body style="display: flex; flex-direction: column; min-height: 100vh; overflow-y: auto;">
 
     <nav class="navbar is-fixed-top" role="navigation" aria-label="main navigation">
         <div class="container">
@@ -50,8 +50,8 @@
     <!-- Spacer for fixed navbar -->
     <div style="height: 3.5rem;"></div>
 
-    <section class="section">
-        <div class="container">
+    <section class="section" style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+        <div class="container" style="width: 100%;">
             {% with messages = get_flashed_messages() %}
             {% if messages %}
             <div class="columns is-centered">
@@ -72,7 +72,7 @@
         </div>
     </section>
 
-    <footer class="footer mt-6" style="background: transparent;">
+    <footer class="footer mt-auto" style="background: transparent; padding: 2rem 1.5rem;">
         <div class="content has-text-centered has-text-grey-light">
             <p>
                 <strong>Picturify</strong> &copy; 2025. Designed with <span style="color: #ec4899;">&hearts;</span> and
