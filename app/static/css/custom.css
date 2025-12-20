@@ -1,0 +1,175 @@
+:root {
+    --primary: #4f46e5;
+    /* Indigo 600 */
+    --primary-light: #818cf8;
+    --secondary: #ec4899;
+    /* Pink 500 */
+    --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+    background: var(--bg-gradient);
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
+    /* We will need to import this in base.html */
+    color: #1f2937;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 30px, 0);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.delay-100 {
+    animation-delay: 0.1s;
+}
+
+.delay-200 {
+    animation-delay: 0.2s;
+}
+
+.delay-300 {
+    animation-delay: 0.3s;
+}
+
+/* Navbar */
+.navbar {
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.navbar-item.brand-text {
+    font-weight: 800;
+    font-size: 1.5rem;
+    background: -webkit-linear-gradient(45deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* UI Components */
+.card {
+    border-radius: 1rem;
+    box-shadow: var(--card-shadow);
+    border: none;
+    transition: var(--transition);
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.button {
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.button.is-primary {
+    background-color: var(--primary);
+}
+
+.button.is-primary:hover {
+    background-color: #4338ca;
+    /* Indigo 700 */
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+/* Drag & Drop Zone */
+.upload-area {
+    border: 2px dashed #cbd5e1;
+    border-radius: 1.5rem;
+    padding: 4rem 2rem;
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.5);
+    transition: var(--transition);
+    cursor: pointer;
+    position: relative;
+}
+
+.upload-area:hover,
+.upload-area.drag-over {
+    border-color: var(--primary);
+    background-color: rgba(79, 70, 229, 0.05);
+    transform: scale(1.01);
+}
+
+.upload-area .icon {
+    font-size: 4rem;
+    color: #94a3b8;
+    margin-bottom: 1.5rem;
+    transition: var(--transition);
+}
+
+.upload-area:hover .icon,
+.upload-area.drag-over .icon {
+    color: var(--primary);
+    transform: scale(1.1);
+}
+
+.upload-area input[type="file"] {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* Table Styling */
+.table {
+    background-color: transparent;
+}
+
+.table th {
+    color: #64748b;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+}
+
+.tag-value.input {
+    border: none;
+    border-bottom: 1px solid #e2e8f0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+.tag-value.input:focus {
+    border-color: var(--primary);
+}
+
+/* Badge/Tag styling */
+
+/* Responsive Adjustments */
+@media screen and (max-width: 768px) {
+    .upload-area {
+        padding: 2rem 1rem;
+    }
+
+    .navbar {
+        background: rgba(255, 255, 255, 0.95) !important;
+    }
+
+    .section {
+        padding: 1.5rem 1rem;
+    }
+}

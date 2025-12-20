@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container fade-in-up">
+    <!-- Header with Back Button -->
+    <div class="level mb-5">
+        <div class="level-left">
+            <a href="{{ url_for('main.index') }}" class="button is-white has-text-grey">
+                <span class="icon"><i class="fas fa-arrow-left"></i></span>
+                <span>Back to Upload</span>
+            </a>
+        </div>
+        <div class="level-right">
+            <h2 class="title is-4 has-text-grey-dark">Analysis Result</h2>
+        </div>
+    </div>
+
+    <div class="columns is-variable is-6">
+
+        <!-- Left Column: Image & Actions -->
+        <div class="column is-4">
+            <div class="card p-1 mb-5 sticky-card">
+                <div class="card-image">
+                    <figure class="image is-4by3 confirm-img" style="border-radius: 0.5rem; overflow: hidden;">
+                        <img src="{{ url_for('static', filename='uploads/' + filename) }}" alt="Analyzed Image"
+                            style="object-fit: contain; background: #f0f2f5;">
+                    </figure>
+                </div>
+                <div class="card-content">
+                    <div class="content">
+                        <p class="heading is-size-7 has-text-centered has-text-grey mb-4">
+                            {{ filename[:20] }}...
+                        </p>
+
+                        <div class="columns is-mobile is-multiline">
+                            <div class="column is-12">
+                                <form action="{{ url_for('main.purify', filename=filename) }}" method="POST">
+                                    <button type="submit" class="button is-danger is-light is-fullwidth"
+                                        title="Remove all EXIF data">
+                                        <span class="icon"><i class="fas fa-soap"></i></span>
+                                        <span>Purify & Clean</span>
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="column is-12">
+                                <a href="{{ url_for('main.download', filename=filename) }}"
+                                    class="button is-primary is-fullwidth">
+                                    <span class="icon"><i class="fas fa-download"></i></span>
+                                    <span>Download</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if gps_info %}
+            <div class="card mt-4 fade-in-up delay-100">
+                <header class="card-header">
+                    <p class="card-header-title has-text-primary">
+                        <span class="icon mr-2"><i class="fas fa-map-marker-alt"></i></span>
+                        GPS Location
+                    </p>
+                </header>
+                <div class="card-content">
+                    <div class="content is-size-7">
+                        <pre style="background: transparent; padding: 0;">{{ gps_info }}</pre>
+                        <!-- In the future: Add Google Maps Link -->
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column: Data & Edit -->
+        <div class="column is-8">
+
+            <!-- Metadata Visualizer -->
+            <div class="card mb-6 fade-in-up delay-100">
+                <header class="card-header" style="box-shadow: none; border-bottom: 1px solid #f1f5f9;">
+                    <p class="card-header-title">
+                        <span class="icon mr-2 has-text-info"><i class="fas fa-list-ul"></i></span>
+                        Metadata Viewer
+                    </p>
+                </header>
+                <div class="card-content">
+                    {% if exif_data %}
+                    <div class="table-container" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table is-hoverable is-fullwidth">
+                            <tbody>
+                                {% for key, value in exif_data.items() %}
+                                {% if key not in ['GPSInfo', 'MakerNote', 'UserComment', 'Thinking'] %}
+                                <tr>
+                                    <td class="has-text-grey is-size-7" style="width: 30%;">{{ key }}</td>
+                                    <td class="has-text-weight-medium is-size-7 font-monospace"
+                                        style="word-break: break-all;">
+                                        {{ value|string|truncate(100) }}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="notification is-light">
+                        No standard EXIF data found.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Editor -->
+            <div class="card fade-in-up delay-200" style="border-left: 4px solid var(--primary);">
+                <header class="card-header" style="box-shadow: none;">
+                    <p class="card-header-title">
+                        <span class="icon mr-2 has-text-primary"><i class="fas fa-edit"></i></span>
+                        Editor
+                    </p>
+                </header>
+                <div class="card-content">
+                    <form action="{{ url_for('main.edit', filename=filename) }}" method="POST" id="edit-form">
+
+                        <div class="columns">
+                            <div class="column is-6">
+                                <div class="field">
+                                    <label class="label is-small">Artist / Creator</label>
+                                    <div class="control has-icons-left">
+                                        <input class="input is-small" type="text" name="Artist"
+                                            placeholder="e.g. John Doe" value="{{ exif_data.get('Artist', '') }}">
+                                        <span class="icon is-small is-left">
+                                            <i class="fas fa-user"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="column is-6">
+                                <div class="field">
+                                    <label class="label is-small">Copyright</label>
+                                    <div class="control has-icons-left">
+                                        <input class="input is-small" type="text" name="Copyright"
+                                            placeholder="e.g. All rights reserved"
+                                            value="{{ exif_data.get('Copyright', '') }}">
+                                        <span class="icon is-small is-left">
+                                            <i class="fas fa-copyright"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label class="label is-small">Image Description</label>
+                            <div class="control">
+                                <textarea class="textarea is-small" name="ImageDescription" rows="2"
+                                    placeholder="Description of the image...">{{ exif_data.get('ImageDescription', '') }}</textarea>
+                            </div>
+                        </div>
+
+                        <hr style="background-color: #f1f5f9; height: 1px;">
+
+                        <div id="custom-fields-container" class="mb-4">
+                            <!-- JS will inject rows here -->
+                        </div>
+
+                        <div class="level is-mobile">
+                            <div class="level-left">
+                                <button type="button" class="button is-small is-ghost" id="add-field-btn">
+                                    <span class="icon"><i class="fas fa-plus-circle"></i></span>
+                                    <span>Add Field</span>
+                                </button>
+                            </div>
+                            <div class="level-right">
+                                <button type="submit" class="button is-primary shadow-md">
+                                    <span class="icon"><i class="fas fa-save"></i></span>
+                                    <span>Save Changes</span>
+                                </button>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Local overrides for sticky behavior */
+    @media screen and (min-width: 769px) {
+        .sticky-card {
+            position: sticky;
+            top: 6rem;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container is-max-widescreen">
+    <div class="columns is-vcentered is-centered" style="min-height: 70vh;">
+        <div class="column is-8-tablet is-6-desktop has-text-centered">
+
+            <div class="mb-6 fade-in-up">
+                <h1 class="title is-1 is-size-2-mobile"
+                    style="background: -webkit-linear-gradient(45deg, #1e293b, #4b5563); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; letter-spacing: -1px;">
+                    Your Images, <br>
+                    <span
+                        style="background: -webkit-linear-gradient(45deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Understood
+                        & Purified.</span>
+                </h1>
+                <p class="subtitle is-5 has-text-grey mt-3">
+                    Drag and drop your photos to reveal hidden metadata, edit details, or scrub them clean for privacy.
+                </p>
+            </div>
+
+            <div class="card p-2 fade-in-up delay-100">
+                <form action="/" method="post" enctype="multipart/form-data">
+                    <div class="upload-area">
+                        <span class="icon is-large">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </span>
+                        <h3 class="title is-4 mb-2">Drop your image here</h3>
+                        <p class="is-size-6 has-text-grey mb-4 mt-2">or click to browse</p>
+
+                        <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,.tiff" id="file-upload">
+
+                        <p id="file-name" class="is-size-5 mt-2" style="min-height: 1.5rem;"></p>
+                    </div>
+
+                    <div class="p-4">
+                        <button type="submit" class="button is-primary is-medium is-fullwidth shadow-md">
+                            <span class="icon"><i class="fas fa-magic"></i></span>
+                            <span>Analyze Image</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <p class="help mt-4 fade-in-up delay-200">
+                <span class="icon-text has-text-grey-light">
+                    <span class="icon"><i class="fas fa-shield-alt"></i></span>
+                    <span>100% Private. Files are deleted automatically.</span>
+                </span>
+            </p>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
