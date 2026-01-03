@@ -1,10 +1,13 @@
 import os
 import uuid
+import logging
 from werkzeug.utils import secure_filename
 from flask import current_app
 import time
 from PIL import Image
 import imghdr
+
+logger = logging.getLogger(__name__)
 
 class ImageHandler:
     @staticmethod
@@ -22,10 +25,10 @@ class ImageHandler:
             header = file.read(512)
             file.seek(0)
             if not imghdr.what(None, header):
-                print("Invalid image format (magic number check failed)")
+                logger.error("Invalid image format (magic number check failed)")
                 return None
         except Exception as e:
-            print(f"Error reading file header: {e}")
+            logger.error(f"Error reading file header: {e}")
             return None
 
         ImageHandler.enforce_storage_limit()
@@ -43,14 +46,14 @@ class ImageHandler:
                 with Image.open(file_path) as img:
                     img.verify()
             except Exception as e:
-                print(f"Invalid image file (PIL verification failed): {e}")
+                logger.error(f"Invalid image file (PIL verification failed): {e}")
                 if os.path.exists(file_path):
                     os.remove(file_path)
                 return None
 
             return unique_filename
         except Exception as e:
-            print(f"Error saving file: {e}")
+            logger.error(f"Error saving file: {e}")
             return None
 
     @staticmethod
@@ -66,7 +69,7 @@ class ImageHandler:
             try:
                 os.remove(file_path)
             except Exception as e:
-                print(f"Error deleting file {filename}: {e}")
+                logger.error(f"Error deleting file {filename}: {e}")
 
     @staticmethod
     def enforce_storage_limit():
@@ -98,9 +101,9 @@ class ImageHandler:
         for i in range(num_to_remove):
             try:
                 os.remove(files[i])
-                print(f"Removed old file: {files[i]} due to storage limit.")
+                os.remove(files[i])
             except Exception as e:
-                print(f"Error removing old file {files[i]}: {e}")
+                logger.error(f"Error removing old file {files[i]}: {e}")
 
     @staticmethod
     def cleanup_old_files(max_age_seconds=3600):
@@ -118,4 +121,6 @@ class ImageHandler:
                     try:
                         os.remove(file_path)
                     except Exception as e:
-                        print(f"Error removing old file {filename}: {e}")
+                        os.remove(file_path)
+                    except Exception as e:
+                        logger.error(f"Error removing old file {filename}: {e}")

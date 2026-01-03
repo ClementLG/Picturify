@@ -7,7 +7,6 @@ import os
 import random
 
 def trigger_bg_cleanup():
-    # Cleanup files older than configured age with configured probability
     prob = current_app.config.get('CLEANUP_PROBABILITY', 0.2)
     max_age = current_app.config.get('MAX_FILE_AGE_SECONDS', 3600)
     
@@ -50,10 +49,16 @@ def index():
         if len(saved_filenames) == 1 and not session.get('batch_files'):
             return redirect(url_for('main.result', filename=saved_filenames[0]))
         else:
-            # Batch Mode - Append to existing
             current_batch = session.get('batch_files', [])
-            # Avoid duplicates if possible, though uuid helps.
-            # Assuming set behavior or simple append.
+            
+            # Check if appending would exceed the limit
+            if len(current_batch) + len(saved_filenames) > max_batch:
+                # Delete newly uploaded files since we can't add them
+                for f in saved_filenames:
+                    ImageHandler.delete_file(f)
+                flash(f'Cannot add files. total batch size would exceed {max_batch}.')
+                return redirect(url_for('main.batch_result'))
+                
             session['batch_files'] = current_batch + saved_filenames
             return redirect(url_for('main.batch_result'))
 
@@ -179,12 +184,8 @@ def edit(filename):
         flash('File not found')
         return redirect(url_for('main.index'))
     
-    # Collect form data
-    # We iterate over the form to allow dynamic custom fields
     changes = {}
     
-    # Predefined known keys are handled directly, but actually we can just take everything 
-    # as the ExifManager filters by its 'tag_db' anyway.
     for key, value in request.form.items():
         if value and key not in ['csrf_token']: # exclude internal flask-wtf tokens if any
              changes[key] = value
@@ -220,10 +221,8 @@ def batch_result():
         flash('No active batch.')
         return redirect(url_for('main.index'))
     
-    # Validate existence
     valid_files = [f for f in filenames if os.path.exists(ImageHandler.get_path(f))]
     
-    # Update session if files were deleted
     if len(valid_files) != len(filenames):
          session['batch_files'] = valid_files
          filenames = valid_files
@@ -303,8 +302,6 @@ def download_batch():
         for fname in filenames:
             file_path = ImageHandler.get_path(fname)
             if os.path.exists(file_path):
-                # Clean filename for the zip (remove uuid prefix for nicer user experience?)
-                # Maybe keep it unique to avoid conflicts. Let's keep unique for now.
                 zf.write(file_path, arcname=fname)
     
     memory_file.seek(0)

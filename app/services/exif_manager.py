@@ -2,6 +2,12 @@ from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 import piexif
 import os
+import logging
+import shutil
+from flask import current_app
+
+
+logger = logging.getLogger(__name__)
 
 class ExifManager:
     @staticmethod
@@ -31,7 +37,7 @@ class ExifManager:
                                 value = str(value)
                         exif_data[decoded] = value
         except Exception as e:
-            print(f"Error extracting EXIF: {e}")
+            logger.error(f"Error extracting EXIF: {e}")
             pass
         return exif_data
 
@@ -53,11 +59,15 @@ class ExifManager:
             image_without_exif = Image.new(image.mode, image.size)
             image_without_exif.putdata(data)
             
-            # Save without metadata
-            image_without_exif.save(dest_path)
+            # Save without metadata using configurable quality
+            image_without_exif.save(
+                dest_path, 
+                quality=current_app.config['IMAGE_QUALITY'], 
+                subsampling=current_app.config['IMAGE_SUBSAMPLING']
+            )
             return dest_path
         except Exception as e:
-            print(f"Error purifying image: {e}")
+            logger.error(f"Error purifying image: {e}")
             return None
     
     @staticmethod
@@ -130,12 +140,9 @@ class ExifManager:
             else:
                 exif_dict = {"0th": {}, "Exif": {}, "GPS": {}, "1st": {}, "thumbnail": None}
 
-            # Helper logic moved to _find_tag_info
-            
             for key, value in changes.items():
                 if not value: continue
-                
-                # Special GPS Handling
+                # ... GPS Handling ...
                 if key == 'gps_lat':
                     try:
                         lat = float(value)
@@ -144,7 +151,7 @@ class ExifManager:
                         exif_dict["GPS"][piexif.GPSIFD.GPSLatitude] = dms
                         exif_dict["GPS"][piexif.GPSIFD.GPSLatitudeRef] = ref.encode('ascii')
                     except Exception as e:
-                        print(f"Error processing GPS Lat: {e}")
+                        logger.error(f"Error processing GPS Lat: {e}")
                     continue
                 
                 if key == 'gps_lon':
@@ -155,50 +162,41 @@ class ExifManager:
                         exif_dict["GPS"][piexif.GPSIFD.GPSLongitude] = dms
                         exif_dict["GPS"][piexif.GPSIFD.GPSLongitudeRef] = ref.encode('ascii')
                     except Exception as e:
-                        print(f"Error processing GPS Lon: {e}")
+                        logger.error(f"Error processing GPS Lon: {e}")
                     continue
 
                 group, tag_id = ExifManager._find_tag_info(key)
                 
                 if group and tag_id:
-                    # Encoding logic
                     if key == 'UserComment':
-                         # UserComment: 8 bytes header + value. 
-                         # ASCII\x00\x00\x00 is standard.
                          encoded_val = b'ASCII\x00\x00\x00' + value.encode('ascii', 'ignore')
                          exif_dict[group][tag_id] = encoded_val
                     else:
-                        # Attempt to determine type. piexif.TAGS[group][tag_id]["type"] gives the type ID.
-                        # Type 2 (Ascii) -> needs bytes ending with null.
-                        # Type 7 (Undefined) -> bytes.
                         tag_type = piexif.TAGS["Image" if group == "0th" else group][tag_id]["type"]
-                        
                         if tag_type == piexif.TYPES.Ascii:
-                            # Ensure utf-8/ascii bytes
                             exif_dict[group][tag_id] = value.encode('utf-8')
                         elif tag_type == piexif.TYPES.Undefined:
                              exif_dict[group][tag_id] = value.encode('utf-8')
                         else:
-                            # For other types (Short, Rational), writing string might fail or need conversion.
-                            # For this MVP we act on a best-effort basis for text-compatible tags.
-                            # If user tries to write "ISO" (Short), passing a string might crash piexif dump.
                             try:
                                 if tag_type in [piexif.TYPES.Short, piexif.TYPES.Long]:
                                     exif_dict[group][tag_id] = int(value)
                                 else:
-                                    print(f"Skipping complex tag {key} (Type {tag_type})")
-                            except:
+                                    logger.debug(f"Skipping complex tag {key} (Type {tag_type})")
+                            except Exception:
                                 pass
 
             exif_bytes = piexif.dump(exif_dict)
-            image.save(dest_path, exif=exif_bytes)
+            image.save(
+                dest_path, 
+                exif=exif_bytes, 
+                quality=current_app.config['IMAGE_QUALITY'], 
+                subsampling=current_app.config['IMAGE_SUBSAMPLING']
+            )
             return dest_path
+
         except Exception as e:
-            print(f"Error modifying EXIF: {e}")
-            try:
-                image.save(dest_path)
-            except:
-                pass
+            logger.error(f"Error modifying EXIF: {e}")
             return None
 
     @staticmethod
@@ -219,7 +217,8 @@ class ExifManager:
             if "exif" in image.info:
                 exif_dict = piexif.load(image.info["exif"])
             else:
-                return dest_path # No EXIF to delete
+                # No EXIF to delete
+                return dest_path
 
             for tag_name in tags_to_delete:
                 group, tag_id = ExifManager._find_tag_info(tag_name)
@@ -228,10 +227,15 @@ class ExifManager:
                         del exif_dict[group][tag_id]
             
             exif_bytes = piexif.dump(exif_dict)
-            image.save(dest_path, exif=exif_bytes)
+            image.save(
+                dest_path, 
+                exif=exif_bytes, 
+                quality=current_app.config['IMAGE_QUALITY'], 
+                subsampling=current_app.config['IMAGE_SUBSAMPLING']
+            )
             return dest_path
         except Exception as e:
-            print(f"Error deleting EXIF tags: {e}")
+            logger.error(f"Error deleting EXIF tags: {e}")
             return None
 
     @staticmethod
@@ -255,11 +259,8 @@ class ExifManager:
                 try:
                     exif_dict = piexif.load(image.info["exif"])
                 except Exception:
-                    # If load fails, we can't optimize, return original or None
                     return None
             else:
-                # No EXIF to filter, saving as is (effectively empty)
-                image.save(dest_path)
                 return dest_path
 
             # Helper to check if a tag should be kept
@@ -279,41 +280,48 @@ class ExifManager:
                 except KeyError:
                     return False
 
-            # Iterate and Filter
-            # Groups: "0th", "Exif", "GPS", "1st", "thumbnail"
-            
-            # 0th
+            # Iterate and Filter...
+            # Note: We repeat the logic here for clarity, though it's the same pattern
             new_0th = {}
             for tag_id, val in exif_dict["0th"].items():
                 if should_keep("0th", tag_id):
                     new_0th[tag_id] = val
             exif_dict["0th"] = new_0th
 
-            # Exif
             new_exif = {}
             for tag_id, val in exif_dict["Exif"].items():
                 if should_keep("Exif", tag_id):
                     new_exif[tag_id] = val
             exif_dict["Exif"] = new_exif
 
-            # GPS
             new_gps = {}
             for tag_id, val in exif_dict["GPS"].items():
                 if should_keep("GPS", tag_id):
                     new_gps[tag_id] = val
             exif_dict["GPS"] = new_gps
 
-            # Clear others just in case
             exif_dict["1st"] = {} 
             exif_dict["thumbnail"] = None 
-            # (Thumbnail data is often large and rarely needed for 'clean' metadata)
 
             exif_bytes = piexif.dump(exif_dict)
-            image.save(dest_path, exif=exif_bytes)
+            image.save(
+                dest_path, 
+                exif=exif_bytes, 
+                quality=current_app.config['IMAGE_QUALITY'], 
+                subsampling=current_app.config['IMAGE_SUBSAMPLING']
+            )
             return dest_path
+
         except Exception as e:
-            print(f"Error optimizing EXIF tags: {e}")
+            logger.error(f"Error optimizing EXIF tags: {e}")
             return None
+
+    @staticmethod
+    def _find_tag_info(tag_name):
+        """
+        Helper to find which IFD group and ID a tag string belongs to.
+        Returns (group_name, tag_id)
+        """
         # Check 0th IFD (Image)
         for tag_id, name in piexif.TAGS["Image"].items():
             if name["name"] == tag_name:
@@ -322,4 +330,9 @@ class ExifManager:
         for tag_id, name in piexif.TAGS["Exif"].items():
             if name["name"] == tag_name:
                 return "Exif", tag_id
+        # Check GPS
+        for tag_id, name in piexif.GPSTAGS.items():
+            if name == tag_name:
+                return "GPS", tag_id
+                
         return None, None

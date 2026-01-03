@@ -16,10 +16,7 @@ class MetadataTemplates:
             # Dates
             'DateTimeOriginal', 'DateTimeDigitized', 'DateTime',
             
-            # GPS - Note regarding piexif: GPS tags are in a separate IFD, 
-            # but our keep_only_tags logic needs to handle knowing which names belong to GPS.
-            # However, typically ExifManager._find_tag_info handles name lookup.
-            # For simplicity in definitions, we list the NAMES here.
+            # GPS
             'GPSVersionID', 'GPSLatitudeRef', 'GPSLatitude', 'GPSLongitudeRef', 'GPSLongitude',
             'GPSAltitudeRef', 'GPSAltitude', 'GPSTimeStamp', 'GPSSatellites', 'GPSStatus',
             'GPSMeasureMode', 'GPSDOP', 'GPSSpeedRef', 'GPSSpeed', 'GPSTrackRef', 'GPSTrack',
