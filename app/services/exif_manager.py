@@ -54,14 +54,12 @@ class ExifManager:
             dest_path = os.path.join(dir_name, f"purified_{file_name}")
 
         try:
-            image = Image.open(source_path)
-            
+            with Image.open(source_path) as image:
+                image.load() # Force load image data into memory so we can close the file handle
+                
+            # Now we can save safely, even if dest_path == source_path (though usually it's different)
             # We strip metadata by simply saving the image to a new file.
             # PIL does not preserve EXIF by default when saving, so we just need to re-save it.
-            # This avoids the incredibly expensive list(image.getdata()) operation.
-            
-            # Note: We must explicitly handle potential rotation if it was EXIF-based? 
-            # The 'purify' action implies stripping ALL metadata, so native orientation is expected.
             
             image.save(
                 dest_path, 
