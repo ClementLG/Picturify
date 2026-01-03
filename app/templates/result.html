@@ -5,10 +5,17 @@
     <!-- Header with Back Button -->
     <div class="level mb-5">
         <div class="level-left">
+            {% if session.get('batch_files') and session.get('batch_files')|length > 1 %}
+            <a href="{{ url_for('main.batch_result') }}" class="button is-white has-text-grey">
+                <span class="icon"><i class="fas fa-th"></i></span>
+                <span>Back to Batch</span>
+            </a>
+            {% else %}
             <a href="{{ url_for('main.index') }}" class="button is-white has-text-grey">
                 <span class="icon"><i class="fas fa-arrow-left"></i></span>
                 <span>Back to Upload</span>
             </a>
+            {% endif %}
         </div>
         <div class="level-right">
             <h2 class="title is-4 has-text-grey-dark">Analysis Result</h2>
@@ -51,6 +58,40 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Smart Clean Card -->
+            <div class="card mt-4 fade-in-up delay-100">
+                <header class="card-header">
+                    <p class="card-header-title has-text-info">
+                        <span class="icon mr-2"><i class="fas fa-magic"></i></span>
+                        Smart Clean
+                    </p>
+                </header>
+                <div class="card-content">
+                    <form action="{{ url_for('main.apply_template', filename=filename) }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="field">
+                            <div class="control">
+                                <div class="select is-fullwidth">
+                                    <select name="template_name">
+                                        {% for t in template_list %}
+                                        <option value="{{ t }}">{{ t|capitalize }} Mode</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <button type="submit" class="button is-info is-light is-fullwidth">
+                                <span>Optimize Metadata</span>
+                            </button>
+                        </div>
+                        <p class="help is-size-7 has-text-centered">
+                            Removes clutter but keeps useful tags for specific platforms.
+                        </p>
+                    </form>
                 </div>
             </div>
 

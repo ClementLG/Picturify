@@ -9,59 +9,67 @@
   </a>
 </p>
 
-<p align="center">
-  <a href="https://www.buymeacoffee.com/clementlg">
-    <img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee">
-  </a>
-</p>
-
 > **Analyze, understand, and purify your images.**
 
 ## 1. Project Overview
 
-**Picturify** is a modern and secure web application dedicated to managing image metadata (EXIF). It allows users to understand what information is hidden in their photos (GPS location, device type, date, etc.) and control this data by modifying or completely removing it ("purifying") before publication.
+**Picturify** is a modern and secure web application dedicated to managing image metadata (EXIF). It enables users to visualize hidden data (GPS, Device, Dates), filter it using smart templates, or completely remove it for privacy.
 
-It features a polished, responsive web interface based on **Bulma** with custom glassmorphism styling, and a fully functional **REST API** for programmatic access.
+Built with **Flask** and **Bulma**, it offers a premium, responsive glassmorphism UI with robust batch processing capabilities.
 
 ---
 
 ## 2. Key Features
 
-### Homepage & Upload
-- **Interface:** Modern Hero section with entrance animations.
-- **Drop Zone:** Interactive, responsive drag & drop area with visual feedback.
-- **Action:** Automatic submission to server for analysis.
+### 🚀 Batch Processing (New!)
+- **Drag & Drop:** Upload multiple images (up to 10) simultaneously.
+- **Batch Grid:** View all uploaded images in a card grid with status indicators.
+- **Global Actions:**
+  - **Purify All:** Remove metadata from all images in one click.
+  - **Apply Smart Templates:** Apply "Flickr Mode" or "Basic Clean" to the entire batch.
+- **Individual Control:** Delete specific images from the batch dynamically.
+- **Management:** Reset the session with "Start Over" or Download All as a ZIP.
+- **Smart Privacy:** Prompt to immediately clean files from the server after downloading.
 
-### Analysis & Dashboard ("Analyze" Mode)
-- **Layout:** Responsive 2-column dashboard (Image preview + Data editor).
-- **Interactive Map:** Visualize GPS coordinates directly on a Leaflet map.
-- **Data Categorization:**
-  - 📍 **Location:** GPS Latitude/Longitude (editable via map).
-  - 📷 **Device:** Model, Brand, Lens.
-  - 📅 **Temporal:** Date taken.
+### 📊 Analysis & Dashboard ("Analyze" Mode)
+- **Interactive Map:** Visualize GPS coordinates on a Leaflet map.
+- **Metadata Viewer:** clear display of Device, Lens, Aperture, ISO, and Date.
+- **Raw Data:** Access the full EXIF key-value pairings.
 
-### Advanced Data Editing ("Understand & Edit" Mode)
-- **Standard Fields:** Easy edit for Artist, Copyright, and Description.
-- **GPS Editor:** Click on the map to set or modify location data.
-- **Custom Fields:** Dynamic form to add specific EXIF tags based on the standard.
+### 🛠️ Advanced Editing ("Understand & Edit" Mode)
+- **Editor:** Modify Copyright, Artist, Description, and Software fields.
+- **GPS Editor:** Set, Change, or Remove GPS location by clicking on the map.
+- **Smart Templates:**
+  - **Flickr Mode:** Keeps Title, Description, Artist, Copyright, GPS, and Technical stats.
+  - **Copyright Only:** Strips everything except Copyright and Artist.
+  - **Basic Clean:** Removes GPS and sensitive info but keeps technical data.
 
-### Purification ("Purify" Mode)
-- **"Purify & Clean" Button:** Removes **all** metadata to anonymize the image and immediately prompts for download.
-- **Smart Workflow:** Optimized flow to download and offer to "Finish" (delete from server) or "Continue Editing".
-
-### Security & Privacy
-- **Automatic Cleanup:** Files older than 1 hour (configurable) are automatically deleted.
-- **Strict Validation:** Magic number checks and PIL verification for all uploads.
-- **CSRF Protection:** Full protection against Cross-Site Request Forgery.
-- **Security Headers:** HSTS, X-Content-Type-Options, etc., via Flask-Talisman.
-- **Path Traversal Protection:** Secure filename handling.
+### 🛡️ Purification ("Purify" Mode)
+- **Deep Clean:** Removes **all** metadata (EXIF, XMP, IPTC, Photoshop) by re-encoding the image.
+- **Lossless Handling:** Prevents image degradation while ensuring files are scrubbed clean.
 
 ---
 
-## 3. Installation and Setup
+## 3. Configuration
+
+Tune the application via `config.py` variables:
+
+### Image Quality
+- `IMAGE_QUALITY`: JPEG output quality (1-100). Default `100` (Max quality). Set to `85` for smaller files.
+- `IMAGE_SUBSAMPLING`: Color sampling. `0` (4:4:4 Best), `2` (4:2:0 Standard).
+
+### Application Limits
+- `MAX_BATCH_SIZE`: Files per session (Default: 10).
+- `MAX_CONTENT_LENGTH`: Upload size limit (Default: 150 MB).
+- `MAX_FILE_AGE_SECONDS`: Auto-cleanup age (Default: 600s).
+- `CLEANUP_PROBABILITY`: Chance of triggering cleanup on request (0.0-1.0).
+
+---
+
+## 4. Installation and Setup
 
 ### Docker (Recommended)
-*Prerequisites: Docker Engine, Docker Compose*
+*Prerequisites: Docker Engine*
 
 1. **Clone and run:**
    ```bash
@@ -69,76 +77,24 @@ It features a polished, responsive web interface based on **Bulma** with custom 
    cd Picturify
    docker compose up --build
    ```
-2. **Access:** Navigate to `http://localhost:5000`.
+2. **Access:** `http://localhost:5000`
 
-### Environment Configuration
-You can control the running mode via the `FLASK_ENV` environment variable in `docker-compose.yml`:
+### Manual Setup
+1. **Install dependencies:** `pip install -r requirements.txt`
+2. **Run:** `python run.py`
 
-- **Production (Default):** Uses **Gunicorn** with 4 workers. Optimized for performance and concurrency.
-  ```yaml
-  environment:
-    - FLASK_ENV=production
-  ```
-- **Development:** Uses `python run.py` with Debug Mode and Hot Reload.
-  ```yaml
-  environment:
-    - FLASK_ENV=development
-  ```
-
-### Configuration (config.py)
-Adjustable settings:
-- `MAX_CONTENT_LENGTH`: Max upload size (default 25 MB).
-- `MAX_STORED_FILES`: Max files stored before oldest are deleted.
-- `CLEANUP_PROBABILITY` & `MAX_FILE_AGE_SECONDS`: Tunable garbage collection parameters.
+### Environment
+Control the mode via `docker-compose.yml` `FLASK_ENV`:
+- `production`: Uses **Gunicorn** (high performance).
+- `development`: Uses Flask Debug Server (hot reload).
 
 ---
 
-## 4. API Documentation
-
-Picturify exposes a RESTful API for integration.
-
-**Base URL:** `/api/v1`
-
-### 1. Analyze Image
-Extracts metadata from an uploaded image.
-
-- **Endpoint:** `POST /analyze`
-- **Body (Multipart/Form-Data):**
-  - `image`: The image file.
-- **Response (JSON):**
-  ```json
-  {
-      "filename": "uuid_original.jpg",
-      "exif_data": {
-          "Model": "iPhone 12",
-          "GPSInfo": {...}
-      }
-  }
-  ```
-
-### 2. Purify Image
-Removes all EXIF metadata and returns the cleaned image.
-
-- **Endpoint:** `POST /purify`
-- **Body (Multipart/Form-Data):**
-  - `image`: The image file.
-- **Response:** Binary image file (JPEG/PNG) without metadata.
-- **Note:** The server deletes the file immediately after processing to conserve space.
-
----
-
-## 5. Tech Stack
-
-### Backend
-- **Python 3.11+**
-- **Flask:** Web Framework.
-- **Gunicorn:** Production WSGI Server.
-- **Pillow / Piexif:** Image & Metadata processing.
-
-### Frontend
-- **Bulma CSS:** Responsive UI.
-- **Leaflet.js:** Interactive Maps.
-- **Vanilla JS:** Dynamic interactions.
+## 5. Security Features
+- **Auto-Cleanup:** Stale files are automatically deleted to prevent storage overflow.
+- **Secure Handling:** Filenames are sanitized; uploads are validated via PIL.
+- **Headers:** HSTS and security headers enabled via `Flask-Talisman`.
+- **CSRF:** All forms protected by `Flask-WTF`.
 
 ---
 
