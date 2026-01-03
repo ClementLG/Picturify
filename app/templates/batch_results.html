@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container fade-in-up">
+    <!-- Header -->
+    <div class="level mb-5">
+        <div class="level-left">
+            <a href="{{ url_for('main.index') }}" class="button is-white has-text-grey">
+                <span class="icon"><i class="fas fa-plus"></i></span>
+                <span>Add Images</span>
+            </a>
+        </div>
+        <div class="level-right">
+            <form action="{{ url_for('main.download_batch') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="button is-primary">
+                    <span class="icon"><i class="fas fa-file-archive"></i></span>
+                    <span>Download All (ZIP)</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Global Actions Bar -->
+    <div class="notification is-light has-text-centered mb-5 shadow-sm">
+        <p class="heading mb-3">Apply to All Images</p>
+        <div class="buttons is-centered">
+            <!-- Purify All -->
+            <form action="{{ url_for('main.batch_action') }}" method="POST" style="margin-right:0.5rem;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="purify">
+                <button type="submit" class="button is-danger is-light is-small">
+                    <span class="icon"><i class="fas fa-soap"></i></span>
+                    <span>Purify All</span>
+                </button>
+            </form>
+
+            <!-- Template Actions -->
+            {% for t in template_list %}
+            <form action="{{ url_for('main.batch_action') }}" method="POST" style="margin-right:0.5rem;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="template_{{ t }}">
+                <button type="submit" class="button is-info is-light is-small">
+                    <span class="icon"><i class="fas fa-magic"></i></span>
+                    <span>{{ t|capitalize }} Mode</span>
+                </button>
+            </form>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Grid View -->
+    <div class="columns is-multiline is-variable is-4">
+        {% for filename in filenames %}
+        <div class="column is-6-tablet is-4-desktop is-3-widescreen">
+            <div class="card h-100 shadow-sm hover-elevate">
+                <div class="card-image">
+                    <figure class="image is-4by3">
+                        <a href="{{ url_for('main.result', filename=filename) }}">
+                            <img src="{{ url_for('static', filename='uploads/' + filename) }}" alt="Image"
+                                style="object-fit: cover; border-radius: 0.25rem 0.25rem 0 0;">
+                        </a>
+                    </figure>
+                </div>
+                <div class="card-content p-3">
+                    <div class="media mb-2">
+                        <div class="media-content" style="overflow: hidden;">
+                            <p class="title is-6 is-ellipsis" title="{{ filename }}">{{ filename }}</p>
+                            <p class="subtitle is-7 has-text-grey">
+                                {% if filename.startswith('optimized_') %}
+                                <span class="tag is-info is-light is-rounded">Optimized</span>
+                                {% elif filename.startswith('purified_') %}
+                                <span class="tag is-success is-light is-rounded">Purified</span>
+                                {% else %}
+                                <span class="tag is-light is-rounded">Original</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('main.result', filename=filename) }}"
+                        class="button is-small is-fullwidth is-white border-dashed">
+                        <span>Edit / View</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    .is-ellipsis {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .hover-elevate {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .hover-elevate:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .border-dashed {
+        border: 1px dashed #cbd5e1;
+    }
+</style>
+{% endblock %}

@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, flash, current_app, send_file
+from flask import render_template, request, redirect, url_for, flash, current_app, send_file, session
 from app.main import main
 from app.services.image_handler import ImageHandler
 from app.services.exif_manager import ExifManager
@@ -24,18 +24,38 @@ def index():
             flash('No file part')
             return redirect(request.url)
         
-        file = request.files['image']
+        files = request.files.getlist('image')
         
-        if file.filename == '':
+        if not files or files[0].filename == '':
             flash('No selected file')
             return redirect(request.url)
-            
-        filename = ImageHandler.save_image(file)
-        if filename:
-            return redirect(url_for('main.result', filename=filename))
-        else:
-            flash('Invalid file type or save error')
+
+        # Enforce Batch Limit
+        max_batch = current_app.config.get('MAX_BATCH_SIZE', 10)
+        if len(files) > max_batch:
+            flash(f'Too many files selected. Maximum is {max_batch}.')
             return redirect(request.url)
+            
+        saved_filenames = []
+        for file in files:
+            if file and file.filename != '':
+                filename = ImageHandler.save_image(file)
+                if filename:
+                    saved_filenames.append(filename)
+        
+        if not saved_filenames:
+            flash('No valid files saved.')
+            return redirect(request.url)
+
+        if len(saved_filenames) == 1 and not session.get('batch_files'):
+            return redirect(url_for('main.result', filename=saved_filenames[0]))
+        else:
+            # Batch Mode - Append to existing
+            current_batch = session.get('batch_files', [])
+            # Avoid duplicates if possible, though uuid helps.
+            # Assuming set behavior or simple append.
+            session['batch_files'] = current_batch + saved_filenames
+            return redirect(url_for('main.batch_result'))
 
     return render_template('index.html')
 
@@ -190,3 +210,107 @@ def edit(filename):
     
     flash('Error updating metadata')
     return redirect(url_for('main.result', filename=filename))
+
+# --- Batch Routes ---
+
+@main.route('/batch_result')
+def batch_result():
+    filenames = session.get('batch_files', [])
+    if not filenames:
+        flash('No active batch.')
+        return redirect(url_for('main.index'))
+    
+    # Validate existence
+    valid_files = [f for f in filenames if os.path.exists(ImageHandler.get_path(f))]
+    
+    # Update session if files were deleted
+    if len(valid_files) != len(filenames):
+         session['batch_files'] = valid_files
+         filenames = valid_files
+
+    if not filenames:
+         flash('All files in batch have been deleted.')
+         return redirect(url_for('main.index'))
+
+    return render_template('batch_results.html', filenames=filenames, template_list=MetadataTemplates.list_templates())
+
+@main.route('/batch_action', methods=['POST'])
+def batch_action():
+    filenames = session.get('batch_files', [])
+    action = request.form.get('action')
+    
+    if not filenames:
+        flash('No batch to process.')
+        return redirect(url_for('main.index'))
+
+    processed_count = 0
+    
+    if action == 'purify':
+        new_filenames = []
+        for fname in filenames:
+            file_path = ImageHandler.get_path(fname)
+            if not os.path.exists(file_path): continue
+            
+            purified_path = ExifManager.remove_exif(file_path)
+            if purified_path:
+                new_fname = os.path.basename(purified_path)
+                if new_fname != fname:
+                    ImageHandler.delete_file(fname)
+                new_filenames.append(new_fname)
+                processed_count += 1
+            else:
+                new_filenames.append(fname)
+        session['batch_files'] = new_filenames
+        flash(f'Purified {processed_count} images.')
+
+    elif action.startswith('template_'):
+        template_name = action.replace('template_', '')
+        kept_tags = MetadataTemplates.get_template(template_name)
+        
+        if kept_tags:
+            new_filenames = []
+            for fname in filenames:
+                file_path = ImageHandler.get_path(fname)
+                if not os.path.exists(file_path): continue
+                
+                optimized_path = ExifManager.keep_only_tags(file_path, kept_tags)
+                if optimized_path:
+                    new_fname = os.path.basename(optimized_path)
+                    if new_fname != fname:
+                         ImageHandler.delete_file(fname)
+                    new_filenames.append(new_fname)
+                    processed_count += 1
+                else:
+                    new_filenames.append(fname)
+            session['batch_files'] = new_filenames
+            flash(f'Optimized {processed_count} images for {template_name}.')
+    
+    return redirect(url_for('main.batch_result'))
+
+@main.route('/download_batch', methods=['POST'])
+def download_batch():
+    filenames = session.get('batch_files', [])
+    if not filenames:
+        flash('No files to download.')
+        return redirect(url_for('main.index'))
+
+    import zipfile
+    import io
+
+    # Create in-memory zip
+    memory_file = io.BytesIO()
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for fname in filenames:
+            file_path = ImageHandler.get_path(fname)
+            if os.path.exists(file_path):
+                # Clean filename for the zip (remove uuid prefix for nicer user experience?)
+                # Maybe keep it unique to avoid conflicts. Let's keep unique for now.
+                zf.write(file_path, arcname=fname)
+    
+    memory_file.seek(0)
+    return send_file(
+        memory_file,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name='picturify_batch.zip'
+    )

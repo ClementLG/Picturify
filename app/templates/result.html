@@ -5,10 +5,17 @@
     <!-- Header with Back Button -->
     <div class="level mb-5">
         <div class="level-left">
+            {% if session.get('batch_files') and session.get('batch_files')|length > 1 %}
+            <a href="{{ url_for('main.batch_result') }}" class="button is-white has-text-grey">
+                <span class="icon"><i class="fas fa-th"></i></span>
+                <span>Back to Batch</span>
+            </a>
+            {% else %}
             <a href="{{ url_for('main.index') }}" class="button is-white has-text-grey">
                 <span class="icon"><i class="fas fa-arrow-left"></i></span>
                 <span>Back to Upload</span>
             </a>
+            {% endif %}
         </div>
         <div class="level-right">
             <h2 class="title is-4 has-text-grey-dark">Analysis Result</h2>
