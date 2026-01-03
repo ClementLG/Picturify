@@ -54,6 +54,40 @@
                 </div>
             </div>
 
+            <!-- Smart Clean Card -->
+            <div class="card mt-4 fade-in-up delay-100">
+                <header class="card-header">
+                    <p class="card-header-title has-text-info">
+                        <span class="icon mr-2"><i class="fas fa-magic"></i></span>
+                        Smart Clean
+                    </p>
+                </header>
+                <div class="card-content">
+                    <form action="{{ url_for('main.apply_template', filename=filename) }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="field">
+                            <div class="control">
+                                <div class="select is-fullwidth">
+                                    <select name="template_name">
+                                        {% for t in template_list %}
+                                        <option value="{{ t }}">{{ t|capitalize }} Mode</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <button type="submit" class="button is-info is-light is-fullwidth">
+                                <span>Optimize Metadata</span>
+                            </button>
+                        </div>
+                        <p class="help is-size-7 has-text-centered">
+                            Removes clutter but keeps useful tags for specific platforms.
+                        </p>
+                    </form>
+                </div>
+            </div>
+
             <!-- View Map Card -->
             <div class="card mt-4 fade-in-up delay-100">
                 <header class="card-header">

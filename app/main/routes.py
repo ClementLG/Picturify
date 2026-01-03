@@ -2,6 +2,7 @@ from flask import render_template, request, redirect, url_for, flash, current_ap
 from app.main import main
 from app.services.image_handler import ImageHandler
 from app.services.exif_manager import ExifManager
+from app.services.metadata_templates import MetadataTemplates
 import os
 import random
 
@@ -59,7 +60,7 @@ def result(filename):
     
     trigger_download = request.args.get('download') == 'true'
     
-    return render_template('result.html', filename=filename, exif_data=exif_data, gps_info=gps_info, lat=lat, lon=lon, trigger_download=trigger_download)
+    return render_template('result.html', filename=filename, exif_data=exif_data, gps_info=gps_info, lat=lat, lon=lon, trigger_download=trigger_download, template_list=MetadataTemplates.list_templates())
 
 @main.route('/download/<filename>')
 def download(filename):
@@ -111,6 +112,37 @@ def purify(filename):
         return redirect(url_for('main.result', filename=purified_filename, download='true'))
     
     flash('Error processing file')
+    return redirect(url_for('main.result', filename=filename))
+
+@main.route('/apply_template/<filename>', methods=['POST'])
+def apply_template(filename):
+    trigger_bg_cleanup()
+    file_path = ImageHandler.get_path(filename)
+    if not os.path.exists(file_path):
+        flash('File not found')
+        return redirect(url_for('main.index'))
+    
+    template_name = request.form.get('template_name')
+    if not template_name:
+        flash('No template selected')
+        return redirect(url_for('main.result', filename=filename))
+        
+    kept_tags = MetadataTemplates.get_template(template_name)
+    if not kept_tags:
+        flash('Invalid template')
+        return redirect(url_for('main.result', filename=filename))
+        
+    optimized_path = ExifManager.keep_only_tags(file_path, kept_tags)
+    
+    if optimized_path:
+        optimized_filename = os.path.basename(optimized_path)
+        if optimized_filename != filename:
+            ImageHandler.delete_file(filename)
+            
+        flash(f'Metadata optimized for {template_name.capitalize()}!')
+        return redirect(url_for('main.result', filename=optimized_filename))
+        
+    flash('Error processing file with template')
     return redirect(url_for('main.result', filename=filename))
 
 @main.route('/finish/<filename>', methods=['POST'])

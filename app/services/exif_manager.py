@@ -235,7 +235,85 @@ class ExifManager:
             return None
 
     @staticmethod
-    def _find_tag_info(tag_name):
+    def keep_only_tags(source_path, kept_tags, dest_path=None):
+        """
+        Removes all EXIF tags EXCEPT those in kept_tags.
+        kept_tags is a list of tag names (str).
+        """
+        if dest_path is None:
+            dir_name, file_name = os.path.split(source_path)
+            # Use 'optimized_' prefix to distinguish
+            if not file_name.startswith("optimized_"):
+                 dest_path = os.path.join(dir_name, f"optimized_{file_name}")
+            else:
+                 dest_path = source_path
+
+        try:
+            image = Image.open(source_path)
+            
+            if "exif" in image.info:
+                try:
+                    exif_dict = piexif.load(image.info["exif"])
+                except Exception:
+                    # If load fails, we can't optimize, return original or None
+                    return None
+            else:
+                # No EXIF to filter, saving as is (effectively empty)
+                image.save(dest_path)
+                return dest_path
+
+            # Helper to check if a tag should be kept
+            def should_keep(group_name, tag_id):
+                # Get tag name
+                try:
+                    if group_name == "0th":
+                        tag_name = piexif.TAGS["Image"][tag_id]["name"]
+                    elif group_name == "Exif":
+                        tag_name = piexif.TAGS["Exif"][tag_id]["name"]
+                    elif group_name == "GPS":
+                         tag_name = piexif.GPSTAGS[tag_id] # GPSTAGS is direct dict ID->Name
+                    else:
+                        return False # remove 1st/Interop if not explicitly handled
+                    
+                    return tag_name in kept_tags
+                except KeyError:
+                    return False
+
+            # Iterate and Filter
+            # Groups: "0th", "Exif", "GPS", "1st", "thumbnail"
+            
+            # 0th
+            new_0th = {}
+            for tag_id, val in exif_dict["0th"].items():
+                if should_keep("0th", tag_id):
+                    new_0th[tag_id] = val
+            exif_dict["0th"] = new_0th
+
+            # Exif
+            new_exif = {}
+            for tag_id, val in exif_dict["Exif"].items():
+                if should_keep("Exif", tag_id):
+                    new_exif[tag_id] = val
+            exif_dict["Exif"] = new_exif
+
+            # GPS
+            new_gps = {}
+            for tag_id, val in exif_dict["GPS"].items():
+                if should_keep("GPS", tag_id):
+                    new_gps[tag_id] = val
+            exif_dict["GPS"] = new_gps
+
+            # Clear others just in case
+            exif_dict["1st"] = {} 
+            exif_dict["thumbnail"] = None 
+            # (Thumbnail data is often large and rarely needed for 'clean' metadata)
+
+            exif_bytes = piexif.dump(exif_dict)
+            image.save(dest_path, exif=exif_bytes)
+            return dest_path
+        except Exception as e:
+            print(f"Error optimizing EXIF tags: {e}")
+            return None
         # Check 0th IFD (Image)
         for tag_id, name in piexif.TAGS["Image"].items():
             if name["name"] == tag_name:
