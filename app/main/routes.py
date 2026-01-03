@@ -311,3 +311,27 @@ def download_batch():
         as_attachment=True,
         download_name='picturify_batch.zip'
     )
+
+@main.route('/delete_batch_file/<filename>', methods=['POST'])
+def delete_batch_file(filename):
+    current_batch = session.get('batch_files', [])
+    if filename in current_batch:
+        current_batch.remove(filename)
+        session['batch_files'] = current_batch
+        ImageHandler.delete_file(filename)
+        flash(f'Removed {filename}')
+    else:
+        flash('File not in batch')
+    
+    return redirect(url_for('main.batch_result'))
+
+@main.route('/clear_batch', methods=['POST'])
+def clear_batch():
+    """Removes all files in the current batch from disk and session."""
+    current_batch = session.get('batch_files', [])
+    for fname in current_batch:
+        ImageHandler.delete_file(fname)
+    
+    session.pop('batch_files', None)
+    flash('Batch cleared and files deleted.')
+    return redirect(url_for('main.index'))

@@ -11,7 +11,15 @@
             </a>
         </div>
         <div class="level-right">
-            <form action="{{ url_for('main.download_batch') }}" method="POST">
+            <form action="{{ url_for('main.clear_batch') }}" method="POST" class="mr-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="button is-danger is-light"
+                    onclick="return confirm('Are you sure you want to delete all files?');">
+                    <span class="icon"><i class="fas fa-trash-alt"></i></span>
+                    <span>Start Over</span>
+                </button>
+            </form>
+            <form action="{{ url_for('main.download_batch') }}" method="POST" onsubmit="showDownloadModal()">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="button is-primary">
                     <span class="icon"><i class="fas fa-file-archive"></i></span>
@@ -54,13 +62,19 @@
         {% for filename in filenames %}
         <div class="column is-6-tablet is-4-desktop is-3-widescreen">
             <div class="card h-100 shadow-sm hover-elevate">
-                <div class="card-image">
+                <div class="card-image" style="position: relative;">
                     <figure class="image is-4by3">
                         <a href="{{ url_for('main.result', filename=filename) }}">
                             <img src="{{ url_for('static', filename='uploads/' + filename) }}" alt="Image"
                                 style="object-fit: cover; border-radius: 0.25rem 0.25rem 0 0;">
                         </a>
                     </figure>
+                    <form action="{{ url_for('main.delete_batch_file', filename=filename) }}" method="POST"
+                        class="delete-btn-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="delete is-medium has-background-danger"
+                            title="Remove from batch"></button>
+                    </form>
                 </div>
                 <div class="card-content p-3">
                     <div class="media mb-2">
@@ -104,8 +118,53 @@
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     }
 
-    .border-dashed {
-        border: 1px dashed #cbd5e1;
+    .delete-btn-form {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        z-index: 10;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .card:hover .delete-btn-form {
+        opacity: 1;
     }
 </style>
+
+<!-- Download Cleanup Modal -->
+<div class="modal" id="downloadModal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">Download Started</p>
+            <button class="delete" aria-label="close" onclick="closeDownloadModal()"></button>
+        </header>
+        <section class="modal-card-body">
+            <p>Your download has started. Do you want to end your session and delete these files from the server?</p>
+            <p class="help is-danger">This will permanently remove the files from the server.</p>
+        </section>
+        <footer class="modal-card-foot">
+            <form action="{{ url_for('main.clear_batch') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="button is-danger">Yes, End Session</button>
+            </form>
+            <button class="button" onclick="closeDownloadModal()">No, Keep Files</button>
+        </footer>
+    </div>
+</div>
+
+<script>
+    function showDownloadModal() {
+        // Show modal after a short delay to allow form submit to register
+        setTimeout(() => {
+            document.getElementById('downloadModal').classList.add('is-active');
+        }, 500);
+        return true; // allow submission
+    }
+
+    function closeDownloadModal() {
+        document.getElementById('downloadModal').classList.remove('is-active');
+    }
+</script>
 {% endblock %}
