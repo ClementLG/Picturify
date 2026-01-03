@@ -55,12 +55,15 @@ class ExifManager:
 
         try:
             image = Image.open(source_path)
-            data = list(image.getdata())
-            image_without_exif = Image.new(image.mode, image.size)
-            image_without_exif.putdata(data)
             
-            # Save without metadata using configurable quality
-            image_without_exif.save(
+            # We strip metadata by simply saving the image to a new file.
+            # PIL does not preserve EXIF by default when saving, so we just need to re-save it.
+            # This avoids the incredibly expensive list(image.getdata()) operation.
+            
+            # Note: We must explicitly handle potential rotation if it was EXIF-based? 
+            # The 'purify' action implies stripping ALL metadata, so native orientation is expected.
+            
+            image.save(
                 dest_path, 
                 quality=current_app.config['IMAGE_QUALITY'], 
                 subsampling=current_app.config['IMAGE_SUBSAMPLING']
