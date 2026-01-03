@@ -54,13 +54,14 @@ class ExifManager:
             dest_path = os.path.join(dir_name, f"purified_{file_name}")
 
         try:
-            image = Image.open(source_path)
-            data = list(image.getdata())
-            image_without_exif = Image.new(image.mode, image.size)
-            image_without_exif.putdata(data)
+            with Image.open(source_path) as image:
+                image.load() # Force load image data into memory so we can close the file handle
+                
+            # Now we can save safely, even if dest_path == source_path (though usually it's different)
+            # We strip metadata by simply saving the image to a new file.
+            # PIL does not preserve EXIF by default when saving, so we just need to re-save it.
             
-            # Save without metadata using configurable quality
-            image_without_exif.save(
+            image.save(
                 dest_path, 
                 quality=current_app.config['IMAGE_QUALITY'], 
                 subsampling=current_app.config['IMAGE_SUBSAMPLING']

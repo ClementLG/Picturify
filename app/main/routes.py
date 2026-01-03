@@ -7,7 +7,8 @@ import os
 import random
 
 def trigger_bg_cleanup():
-    prob = current_app.config.get('CLEANUP_PROBABILITY', 0.2)
+    # Reduce default probability to 10% to prevent frequent blocking
+    prob = current_app.config.get('CLEANUP_PROBABILITY', 0.1)
     max_age = current_app.config.get('MAX_FILE_AGE_SECONDS', 3600)
     
     if random.random() < prob:

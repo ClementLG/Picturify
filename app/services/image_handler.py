@@ -107,20 +107,39 @@ class ImageHandler:
 
     @staticmethod
     def cleanup_old_files(max_age_seconds=3600):
-        # This could be run as a background task
+        """
+        Removes files older than max_age_seconds.
+        Optimized to avoid scanning thousands of files on every request.
+        """
         upload_folder = current_app.config['UPLOAD_FOLDER']
         now = time.time()
         
         if not os.path.exists(upload_folder):
             return
 
-        for filename in os.listdir(upload_folder):
-            file_path = os.path.join(upload_folder, filename)
-            if os.path.isfile(file_path):
-                if os.stat(file_path).st_mtime < now - max_age_seconds:
+        # Optimization: Don't scan ALL files every time.
+        # Scan a random subset or stop after deleting a few?
+        # A simple approach for synchronous web requests is to limit the scan.
+        try:
+             # Just listdir can be slow if directory is huge, but it's the fastest way to get handles.
+            files = os.listdir(upload_folder)
+            
+            # If we have too many files, just check a random sample of them (e.g. 50)
+            # This ensures we don't block for long even if there are 10,000 files.
+            # Over time, everything gets cleaned.
+            import random
+            if len(files) > 50:
+                files = random.sample(files, 50)
+                
+            for filename in files:
+                file_path = os.path.join(upload_folder, filename)
+                # Ensure we only check files
+                if os.path.isfile(file_path):
                     try:
-                        os.remove(file_path)
-                    except Exception as e:
-                        os.remove(file_path)
-                    except Exception as e:
-                        logger.error(f"Error removing old file {filename}: {e}")
+                        # cached stat call?
+                        if os.stat(file_path).st_mtime < now - max_age_seconds:
+                            os.remove(file_path)
+                    except OSError:
+                        pass # File might have been deleted by another thread/process
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}")
