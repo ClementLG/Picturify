@@ -6,7 +6,7 @@ import os
 import random
 
 def trigger_bg_cleanup():
-    # Cleanup files older than configured age with configured probability
+    # Cleanup files based on configuraton
     prob = current_app.config.get('CLEANUP_PROBABILITY', 0.2)
     max_age = current_app.config.get('MAX_FILE_AGE_SECONDS', 3600)
     

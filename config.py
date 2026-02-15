@@ -1,32 +1,32 @@
 import os
 
 class Config:
-    # Security: Secret key for session signing. Change this in production!
+    # Secret key for session signing
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
 
-    # Storage: Directory where uploaded files are temporarily stored
+    # Directory where uploaded files are temporarily stored
     UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'app', 'static', 'uploads')
 
-    # Security: Max upload size (150 MB). Prevents large file DoS attacks.
+    # Max upload size (150 MB)
     MAX_CONTENT_LENGTH = 150 * 1024 * 1024
 
-    # Validation: Allowed image extensions
+    # Allowed image extensions
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'tiff', 'webp', 'heic', 'heif'}
 
-    # Limits: Maximum number of files to keep in storage before cleanup triggers (not strictly enforced, mostly for reference)
+    # Maximum number of files to keep in storage before cleanup triggers
     MAX_STORED_FILES = 100
 
-    # Limits: Maximum number of files a user can upload in a single batch session
+    # Maximum number of files a user can upload in a single batch session
     MAX_BATCH_SIZE = 10
 
-    # Cleanup: Probability (0-1) that a cleanup run triggers on a request
+    # Probability (0-1) that a cleanup run triggers on a request
     CLEANUP_PROBABILITY = 0.5
 
-    # Cleanup: How old a file must be (in seconds) to be considered for deletion
+    # How old a file must be (in seconds) to be considered for deletion
     MAX_FILE_AGE_SECONDS = 600
 
-    # Image Processing: Output quality for re-encoded images (1-100).
-    # 100 = Best quality (larger file size), 85-95 = Good balance.
+    # Output quality for re-encoded images (1-100).
+    # 100 = Best quality, 85-95 = Good balance.
     IMAGE_QUALITY = 100
 
     # Image Processing: Chroma subsampling (0-2).

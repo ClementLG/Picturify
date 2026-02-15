@@ -29,7 +29,7 @@ class ExifManager:
                             gps_data[sub_decoded] = value[t]
                         exif_data[decoded] = gps_data
                     else:
-                        # Convert bytes to string if needed for JSON serialization
+                        # Decode bytes to string used for JSON serialization
                         if isinstance(value, bytes):
                             try:
                                 value = value.decode()
@@ -94,7 +94,7 @@ class ExifManager:
     @staticmethod
     def _convert_to_degrees(value):
         """
-        Helper function to convert the GPS coordinates stored in the EXIF to degress in float format
+        Converts GPS coordinates from EXIF format to degrees (float).
         """
         d = float(value[0])
         m = float(value[1])
@@ -104,7 +104,7 @@ class ExifManager:
     @staticmethod
     def _convert_to_dms(value):
         """
-        Helper function to convert float degrees to EXIF DMS format (rational tuples).
+        Converts float degrees to EXIF DMS format (rational tuples).
         """
         value = abs(value)
         d = int(value)
@@ -140,7 +140,7 @@ class ExifManager:
 
             for key, value in changes.items():
                 if not value: continue
-                # ... GPS Handling ...
+                # GPS Handling
                 if key == 'gps_lat':
                     try:
                         lat = float(value)
@@ -218,8 +218,7 @@ class ExifManager:
             if "exif" in image.info:
                 exif_dict = piexif.load(image.info["exif"])
             else:
-                # No EXIF to delete but we might want to re-save with new quality?
-                # For consistency let's save.
+                # Save with new quality settings even if no EXIF is present
                 image.save(dest_path, quality=quality, subsampling=current_app.config['IMAGE_SUBSAMPLING'])
                 return dest_path
 
@@ -288,8 +287,7 @@ class ExifManager:
                 except KeyError:
                     return False
 
-            # Iterate and Filter...
-            # Note: We repeat the logic here for clarity, though it's the same pattern
+            # Iterate and Filter Tags
             new_0th = {}
             for tag_id, val in exif_dict["0th"].items():
                 if should_keep("0th", tag_id):

@@ -119,7 +119,6 @@ class ImageHandler:
         
         # Calculate how many to remove. 
         # We want to remove enough so that after adding 1 new file, we are still within limit.
-        # But broadly, if current >= max, remove (current - max + 1)
         num_to_remove = len(files) - max_files + 1
         
         for i in range(num_to_remove):
@@ -150,7 +149,6 @@ class ImageHandler:
             
             # If we have too many files, just check a random sample of them (e.g. 50)
             # This ensures we don't block for long even if there are 10,000 files.
-            # Over time, everything gets cleaned.
             import random
             if len(files) > 50:
                 files = random.sample(files, 50)

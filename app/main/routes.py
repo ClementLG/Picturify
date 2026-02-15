@@ -8,7 +8,7 @@ import os
 import random
 
 def trigger_bg_cleanup():
-    # Reduce default probability to 10% to prevent frequent blocking
+    # Reduce default probability to prevent frequent blocking
     prob = current_app.config.get('CLEANUP_PROBABILITY', 0.1)
     max_age = current_app.config.get('MAX_FILE_AGE_SECONDS', 3600)
     
@@ -58,7 +58,7 @@ def index():
                 # Delete newly uploaded files since we can't add them
                 for f in saved_filenames:
                     ImageHandler.delete_file(f)
-                flash(f'Cannot add files. total batch size would exceed {max_batch}.')
+                flash(f'Cannot add files. Total batch size would exceed {max_batch}.')
                 return redirect(url_for('main.batch_result'))
                 
             session['batch_files'] = current_batch + saved_filenames
@@ -108,7 +108,6 @@ def download(filename):
             import io
             
             # Use ExifManager logic to compress but keep EXIF? 
-            # Usually download means "as is" or "optimized".
             # If user selected compression in "Purify", they removed EXIF.
             # If they just want to download compressed, let's keep EXIF but compress.
             

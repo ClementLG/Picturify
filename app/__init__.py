@@ -9,7 +9,7 @@ def create_app(config_class=Config):
     
     # Security Plugins
     csrf = CSRFProtect(app)
-    # Enable Security Headers, but disable CSP (to allow inline scripts/styles) and HTTPS redirect (for local/proxy compatibility)
+    # Enable Security Headers, but disable CSP (to allow inline scripts/styles) and HTTPS redirect
     Talisman(app, content_security_policy=None, force_https=False) 
 
     config_class.init_app(app)

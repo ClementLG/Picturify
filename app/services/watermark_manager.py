@@ -10,8 +10,6 @@ class WatermarkManager:
     def apply_watermark(source_path, text, position='center', opacity=0.5, dest_path=None):
         """
         Applies a text watermark to the image.
-        position: 'center', 'bottom-right', 'bottom-left', 'top-right', 'top-left'
-        opacity: 0.0 to 1.0
         """
         if dest_path is None:
             dir_name, file_name = os.path.split(source_path)
@@ -27,7 +25,7 @@ class WatermarkManager:
                 txt = Image.new("RGBA", base.size, (255, 255, 255, 0))
 
                 # font setup
-                # Try to load a default font, otherwise load default
+                # Load font
                 try:
                      # Use a large font size relative to image height (e.g., 5%)
                     font_size = int(base.size[1] * 0.05)
@@ -38,8 +36,7 @@ class WatermarkManager:
 
                 d = ImageDraw.Draw(txt)
                 
-                # Get text box size using getbbox method which is cleaner
-                # textbbox returns (left, top, right, bottom)
+                # Calculate text dimensions
                 left, top, right, bottom = d.textbbox((0, 0), text, font=font)
                 text_width = right - left
                 text_height = bottom - top
@@ -65,8 +62,7 @@ class WatermarkManager:
                     x = padding
                     y = padding
 
-                # draw text on the transparent layer
-                # White text with alpha based on opacity
+                # Draw text on the transparent layer
                 alpha = int(255 * opacity)
                 d.text((x, y), text, font=font, fill=(255, 255, 255, alpha))
 
