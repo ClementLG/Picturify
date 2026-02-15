@@ -39,10 +39,27 @@
                             {{ filename[:20] }}...
                         </p>
 
+                        <div class="field mb-4">
+                            <label class="label">Global Compression Level</label>
+                            <div class="control">
+                                <div class="select is-fullwidth">
+                                    <select id="global-quality">
+                                        <option value="100" selected>Best Quality (100%) - No Compression</option>
+                                        <option value="90">High (90%) - Good for web</option>
+                                        <option value="80">Medium (80%) - Balanced</option>
+                                        <option value="60">Low (60%) - Small file size</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <p class="help">Applies to Purify, Smart Clean, and Download.</p>
+                        </div>
+
                         <div class="columns is-mobile is-multiline">
                             <div class="column is-12">
                                 <form action="{{ url_for('main.purify', filename=filename) }}" method="POST">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                    <input type="hidden" name="quality" value="100">
+
                                     <button type="submit" class="button is-danger is-light is-fullwidth"
                                         title="Remove all EXIF data">
                                         <span class="icon"><i class="fas fa-soap"></i></span>
@@ -72,6 +89,7 @@
                 <div class="card-content">
                     <form action="{{ url_for('main.apply_template', filename=filename) }}" method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="quality" value="100">
                         <div class="field">
                             <div class="control">
                                 <div class="select is-fullwidth">
@@ -83,6 +101,7 @@
                                 </div>
                             </div>
                         </div>
+
                         <div class="field">
                             <button type="submit" class="button is-info is-light is-fullwidth">
                                 <span>Optimize Metadata</span>
@@ -91,6 +110,67 @@
                         <p class="help is-size-7 has-text-centered">
                             Removes clutter but keeps useful tags for specific platforms.
                         </p>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Watermark Card -->
+            <div class="card mt-4 fade-in-up delay-100">
+                <header class="card-header">
+                    <p class="card-header-title has-text-link">
+                        <span class="icon mr-2"><i class="fas fa-copyright"></i></span>
+                        Watermark
+                    </p>
+                </header>
+                <div class="card-content">
+                    <form action="{{ url_for('main.watermark', filename=filename) }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="field">
+                            <label class="label is-small">Text</label>
+                            <div class="control">
+                                <input class="input is-small" type="text" name="watermark_text"
+                                    placeholder="e.g. © 2026 Me" required>
+                            </div>
+                        </div>
+
+                        <div class="field is-horizontal">
+                            <div class="field-body">
+                                <div class="field">
+                                    <label class="label is-small">Position</label>
+                                    <div class="control">
+                                        <div class="select is-small is-fullwidth">
+                                            <select name="watermark_position">
+                                                <option value="center">Center</option>
+                                                <option value="bottom-right" selected>Bottom Right</option>
+                                                <option value="bottom-left">Bottom Left</option>
+                                                <option value="top-right">Top Right</option>
+                                                <option value="top-left">Top Left</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="field">
+                                    <label class="label is-small">Opacity</label>
+                                    <div class="control">
+                                        <div class="select is-small is-fullwidth">
+                                            <select name="watermark_opacity">
+                                                <option value="0.3">30%</option>
+                                                <option value="0.5" selected>50%</option>
+                                                <option value="0.8">80%</option>
+                                                <option value="1.0">100%</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <button type="submit" class="button is-link is-light is-fullwidth">
+                                <span>Apply Watermark</span>
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -323,44 +403,95 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // ---- Download Logic ----
+        // ---- Config & Initialization ----
+        const filename = "{{ filename }}";
         const triggerDownload = {{ trigger_download| tojson
     }};
-    const downloadUrl = "{{ url_for('main.download', filename=filename) }}";
+    const qualitySelect = document.getElementById('global-quality');
     const downloadBtn = document.getElementById('download-btn');
+    const hiddenInputs = document.querySelectorAll('input[type="hidden"][name="quality"]');
     const modal = document.getElementById('download-modal');
 
-    function startDownload() {
-        // Create hidden link to trigger download
+    // ---- Functions ----
+
+    function getDownloadUrl() {
+        // Base URL
+        const baseUrl = "{{ url_for('main.download', filename=filename) }}";
+
+        // Check quality if selector exists
+        if (qualitySelect) {
+            const quality = qualitySelect.value;
+            if (quality < 100) {
+                return `${baseUrl}?quality=${quality}`;
+            }
+        }
+        return baseUrl;
+    }
+
+    function triggerFileDownload(url) {
         const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = '';
+        link.href = url;
+        link.download = ''; // Force download
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-
-        // Show modal
-        modal.classList.add('is-active');
     }
 
-    if (triggerDownload) {
-        startDownload();
+    function showDownloadModal() {
+        if (modal) modal.classList.add('is-active');
     }
 
+    function closeModal() {
+        if (modal) modal.classList.remove('is-active');
+    }
+
+    // Expose to window for inline onclicks if any
+    window.closeModal = closeModal;
+
+    // ---- Event Listeners ----
+
+    // 1. Manual Download Click
     if (downloadBtn) {
         downloadBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            startDownload();
+            const url = getDownloadUrl();
+            triggerFileDownload(url);
+            showDownloadModal();
         });
     }
 
-    // Expose close modal
-    window.closeModal = function () {
-        modal.classList.remove('is-active');
+    // 2. Auto Download (from redirect)
+    if (triggerDownload) {
+        // Provide a small delay to ensure UI renders
+        setTimeout(() => {
+            const url = getDownloadUrl();
+            // Note: Auto-download usually means we accept the current state.
+            // However, reusing getDownloadUrl() respects the default state of the dropdown (usually 100).
+            triggerFileDownload(url);
+            showDownloadModal();
+        }, 500);
     }
 
+    // 3. Modal Background Click
     const bg = document.querySelector('.modal-background');
     if (bg) bg.addEventListener('click', closeModal);
+
+    // 4. Quality Selector Change
+    if (qualitySelect) {
+        qualitySelect.addEventListener('change', () => {
+            const quality = qualitySelect.value;
+            // Update hidden inputs for other forms (Purify/Template)
+            hiddenInputs.forEach(input => {
+                input.value = quality;
+            });
+        });
+
+        // Initialize hidden inputs
+        const quality = qualitySelect.value;
+        hiddenInputs.forEach(input => {
+            input.value = quality;
+        });
+    }
 
     // ---- Map Logic ----
     const latStr = "{{ lat if lat else 'null' }}";
@@ -368,13 +499,11 @@
     const lat = (latStr === 'null') ? null : parseFloat(latStr);
     const lon = (lonStr === 'null') ? null : parseFloat(lonStr);
     const hasLocation = (lat !== null && lon !== null);
-
-    // Default view (Paris) if no loc
     const defaultCenter = [48.8566, 2.3522];
     const initialCenter = hasLocation ? [lat, lon] : defaultCenter;
     const initialZoom = 13;
 
-    // 1. View Map (Only if loc exists or placeholder)
+    // View Map
     if (document.getElementById('view-map') && hasLocation) {
         const map = L.map('view-map').setView(initialCenter, initialZoom);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -383,7 +512,7 @@
         L.marker(initialCenter).addTo(map);
     }
 
-    // 2. Edit Map
+    // Edit Map
     if (document.getElementById('edit-map')) {
         const editMap = L.map('edit-map').setView(initialCenter, initialZoom);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -395,27 +524,20 @@
             marker = L.marker(initialCenter, { draggable: true }).addTo(editMap);
         }
 
-        // Inputs
         const latInput = document.getElementById('gps_lat');
         const lonInput = document.getElementById('gps_lon');
 
-        // Update markers on click
         editMap.on('click', function (e) {
             const coord = e.latlng;
-            const newLat = coord.lat.toFixed(6);
-            const newLon = coord.lng.toFixed(6);
-
             if (marker) {
                 marker.setLatLng(coord);
             } else {
                 marker = L.marker(coord, { draggable: true }).addTo(editMap);
             }
-
-            latInput.value = newLat;
-            lonInput.value = newLon;
+            latInput.value = coord.lat.toFixed(6);
+            lonInput.value = coord.lng.toFixed(6);
         });
 
-        // Update inputs on drag
         if (marker) {
             marker.on('dragend', function (e) {
                 const coord = marker.getLatLng();

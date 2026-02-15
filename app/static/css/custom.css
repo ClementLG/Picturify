@@ -5,16 +5,50 @@
     --secondary: #ec4899;
     /* Pink 500 */
     --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    --card-bg: rgba(255, 255, 255, 0.9);
     --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --text-color: #1f2937;
+    --navbar-bg: rgba(255, 255, 255, 0.8);
+    --input-bg: #ffffff;
+    --input-border: #dbdbdb;
+}
+
+[data-theme="dark"] {
+    --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    --card-bg: #1e293b;
+    --text-color: #e2e8f0;
+    --navbar-bg: rgba(15, 23, 42, 0.9);
+    --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    --input-bg: #334155;
+    --input-border: #475569;
 }
 
 body {
     background: var(--bg-gradient);
     min-height: 100vh;
     font-family: 'Inter', sans-serif;
-    /* We will need to import this in base.html */
-    color: #1f2937;
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .title,
+[data-theme="dark"] .subtitle,
+[data-theme="dark"] .label,
+[data-theme="dark"] .input,
+[data-theme="dark"] .select select,
+[data-theme="dark"] .textarea {
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .input,
+[data-theme="dark"] .select select,
+[data-theme="dark"] .textarea {
+    background-color: var(--input-bg);
+    border-color: var(--input-border);
+}
+
+[data-theme="dark"] .card-header-title {
+    color: var(--text-color);
 }
 
 /* Animations */
@@ -48,7 +82,7 @@ body {
 
 /* Navbar */
 .navbar {
-    background: rgba(255, 255, 255, 0.8) !important;
+    background: var(--navbar-bg) !important;
     backdrop-filter: blur(10px);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
@@ -67,7 +101,7 @@ body {
     box-shadow: var(--card-shadow);
     border: none;
     transition: var(--transition);
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--card-bg);
 }
 
 .card:hover {

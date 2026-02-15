@@ -47,6 +47,11 @@
 
             <div id="navbarBasicExample" class="navbar-menu">
                 <div class="navbar-end">
+                    <a class="navbar-item" id="theme-toggle" title="Toggle Dark/Light Mode">
+                        <span class="icon" style="color: var(--text-color);">
+                            <i class="fas fa-moon" id="theme-icon"></i>
+                        </span>
+                    </a>
                     <a href="{{ url_for('main.about') }}" class="navbar-item" title="About & Disclaimer">
                         <span class="icon" style="color: var(--info);"><i class="fas fa-info-circle"></i></span>
                     </a>
@@ -93,6 +98,32 @@
     </footer>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggle = document.getElementById('theme-toggle');
+            const icon = document.getElementById('theme-icon');
+            const html = document.documentElement;
+
+            // Check local storage
+            const currentTheme = localStorage.getItem('theme');
+            if (currentTheme === 'dark') {
+                html.setAttribute('data-theme', 'dark');
+                icon.classList.replace('fa-moon', 'fa-sun');
+            }
+
+            toggle.addEventListener('click', () => {
+                if (html.getAttribute('data-theme') === 'dark') {
+                    html.removeAttribute('data-theme');
+                    localStorage.setItem('theme', 'light');
+                    icon.classList.replace('fa-sun', 'fa-moon');
+                } else {
+                    html.setAttribute('data-theme', 'dark');
+                    localStorage.setItem('theme', 'dark');
+                    icon.classList.replace('fa-moon', 'fa-sun');
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>

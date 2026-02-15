@@ -11,7 +11,7 @@ class Config:
     MAX_CONTENT_LENGTH = 150 * 1024 * 1024
 
     # Validation: Allowed image extensions
-    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'tiff', 'webp'}
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'tiff', 'webp', 'heic', 'heif'}
 
     # Limits: Maximum number of files to keep in storage before cleanup triggers (not strictly enforced, mostly for reference)
     MAX_STORED_FILES = 100
