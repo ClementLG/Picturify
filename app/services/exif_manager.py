@@ -29,7 +29,7 @@ class ExifManager:
                             gps_data[sub_decoded] = value[t]
                         exif_data[decoded] = gps_data
                     else:
-                        # Convert bytes to string if needed for JSON serialization
+                        # Decode bytes to string used for JSON serialization
                         if isinstance(value, bytes):
                             try:
                                 value = value.decode()
@@ -42,28 +42,24 @@ class ExifManager:
         return exif_data
 
     @staticmethod
-    def remove_exif(source_path, dest_path=None):
+    def remove_exif(source_path, dest_path=None, quality=None):
         """
         Removes EXIF data and saves the image.
-        If dest_path is None, overwrites source_path (or saves to a temporary location).
-        Actually for typical web usage, we probably want to create a new 'purified' version.
         """
         if dest_path is None:
-            # Create a prefixed filename
             dir_name, file_name = os.path.split(source_path)
             dest_path = os.path.join(dir_name, f"purified_{file_name}")
+            
+        if quality is None:
+            quality = current_app.config['IMAGE_QUALITY']
 
         try:
             with Image.open(source_path) as image:
-                image.load() # Force load image data into memory so we can close the file handle
+                image.load() 
                 
-            # Now we can save safely, even if dest_path == source_path (though usually it's different)
-            # We strip metadata by simply saving the image to a new file.
-            # PIL does not preserve EXIF by default when saving, so we just need to re-save it.
-            
             image.save(
                 dest_path, 
-                quality=current_app.config['IMAGE_QUALITY'], 
+                quality=quality, 
                 subsampling=current_app.config['IMAGE_SUBSAMPLING']
             )
             return dest_path
@@ -98,7 +94,7 @@ class ExifManager:
     @staticmethod
     def _convert_to_degrees(value):
         """
-        Helper function to convert the GPS coordinates stored in the EXIF to degress in float format
+        Converts GPS coordinates from EXIF format to degrees (float).
         """
         d = float(value[0])
         m = float(value[1])
@@ -108,7 +104,7 @@ class ExifManager:
     @staticmethod
     def _convert_to_dms(value):
         """
-        Helper function to convert float degrees to EXIF DMS format (rational tuples).
+        Converts float degrees to EXIF DMS format (rational tuples).
         """
         value = abs(value)
         d = int(value)
@@ -119,11 +115,9 @@ class ExifManager:
         return ((d, 1), (m, 1), (int(s * 100), 100))
 
     @staticmethod
-    def modify_exif(source_path, changes, dest_path=None):
+    def modify_exif(source_path, changes, dest_path=None, quality=None):
         """
         Modifies specific EXIF tags.
-        'changes' is a dict of tag names (str) and new values (str).
-        Now supports 'gps_lat' and 'gps_lon' (floats/strings).
         """
         if dest_path is None:
             dir_name, file_name = os.path.split(source_path)
@@ -131,6 +125,9 @@ class ExifManager:
                  dest_path = os.path.join(dir_name, f"formatted_{file_name}")
             else:
                  dest_path = source_path
+                 
+        if quality is None:
+            quality = current_app.config['IMAGE_QUALITY']
 
         try:
             image = Image.open(source_path)
@@ -143,7 +140,7 @@ class ExifManager:
 
             for key, value in changes.items():
                 if not value: continue
-                # ... GPS Handling ...
+                # GPS Handling
                 if key == 'gps_lat':
                     try:
                         lat = float(value)
@@ -191,7 +188,7 @@ class ExifManager:
             image.save(
                 dest_path, 
                 exif=exif_bytes, 
-                quality=current_app.config['IMAGE_QUALITY'], 
+                quality=quality, 
                 subsampling=current_app.config['IMAGE_SUBSAMPLING']
             )
             return dest_path
@@ -201,7 +198,7 @@ class ExifManager:
             return None
 
     @staticmethod
-    def delete_tags(source_path, tags_to_delete, dest_path=None):
+    def delete_tags(source_path, tags_to_delete, dest_path=None, quality=None):
         """
         Removes specific EXIF tags from the image.
         """
@@ -211,6 +208,9 @@ class ExifManager:
                  dest_path = os.path.join(dir_name, f"formatted_{file_name}")
             else:
                  dest_path = source_path
+                 
+        if quality is None:
+             quality = current_app.config['IMAGE_QUALITY']
 
         try:
             image = Image.open(source_path)
@@ -218,7 +218,8 @@ class ExifManager:
             if "exif" in image.info:
                 exif_dict = piexif.load(image.info["exif"])
             else:
-                # No EXIF to delete
+                # Save with new quality settings even if no EXIF is present
+                image.save(dest_path, quality=quality, subsampling=current_app.config['IMAGE_SUBSAMPLING'])
                 return dest_path
 
             for tag_name in tags_to_delete:
@@ -231,7 +232,7 @@ class ExifManager:
             image.save(
                 dest_path, 
                 exif=exif_bytes, 
-                quality=current_app.config['IMAGE_QUALITY'], 
+                quality=quality, 
                 subsampling=current_app.config['IMAGE_SUBSAMPLING']
             )
             return dest_path
@@ -240,7 +241,7 @@ class ExifManager:
             return None
 
     @staticmethod
-    def keep_only_tags(source_path, kept_tags, dest_path=None):
+    def keep_only_tags(source_path, kept_tags, dest_path=None, quality=None):
         """
         Removes all EXIF tags EXCEPT those in kept_tags.
         kept_tags is a list of tag names (str).
@@ -252,6 +253,9 @@ class ExifManager:
                  dest_path = os.path.join(dir_name, f"optimized_{file_name}")
             else:
                  dest_path = source_path
+                 
+        if quality is None:
+             quality = current_app.config['IMAGE_QUALITY']
 
         try:
             image = Image.open(source_path)
@@ -273,16 +277,17 @@ class ExifManager:
                     elif group_name == "Exif":
                         tag_name = piexif.TAGS["Exif"][tag_id]["name"]
                     elif group_name == "GPS":
-                         tag_name = piexif.GPSTAGS[tag_id] # GPSTAGS is direct dict ID->Name
+                         # Use PIL's GPSTAGS
+                         tag_name = GPSTAGS.get(tag_id, None)
                     else:
                         return False # remove 1st/Interop if not explicitly handled
                     
+                    if not tag_name: return False
                     return tag_name in kept_tags
                 except KeyError:
                     return False
 
-            # Iterate and Filter...
-            # Note: We repeat the logic here for clarity, though it's the same pattern
+            # Iterate and Filter Tags
             new_0th = {}
             for tag_id, val in exif_dict["0th"].items():
                 if should_keep("0th", tag_id):
@@ -308,7 +313,7 @@ class ExifManager:
             image.save(
                 dest_path, 
                 exif=exif_bytes, 
-                quality=current_app.config['IMAGE_QUALITY'], 
+                quality=quality, 
                 subsampling=current_app.config['IMAGE_SUBSAMPLING']
             )
             return dest_path
@@ -331,8 +336,8 @@ class ExifManager:
         for tag_id, name in piexif.TAGS["Exif"].items():
             if name["name"] == tag_name:
                 return "Exif", tag_id
-        # Check GPS
-        for tag_id, name in piexif.GPSTAGS.items():
+        # Check GPS using PIL.ExifTags.GPSTAGS
+        for tag_id, name in GPSTAGS.items():
             if name == tag_name:
                 return "GPS", tag_id
                 

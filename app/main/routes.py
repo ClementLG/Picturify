@@ -3,11 +3,12 @@ from app.main import main
 from app.services.image_handler import ImageHandler
 from app.services.exif_manager import ExifManager
 from app.services.metadata_templates import MetadataTemplates
+from app.services.watermark_manager import WatermarkManager
 import os
 import random
 
 def trigger_bg_cleanup():
-    # Reduce default probability to 10% to prevent frequent blocking
+    # Reduce default probability to prevent frequent blocking
     prob = current_app.config.get('CLEANUP_PROBABILITY', 0.1)
     max_age = current_app.config.get('MAX_FILE_AGE_SECONDS', 3600)
     
@@ -57,7 +58,7 @@ def index():
                 # Delete newly uploaded files since we can't add them
                 for f in saved_filenames:
                     ImageHandler.delete_file(f)
-                flash(f'Cannot add files. total batch size would exceed {max_batch}.')
+                flash(f'Cannot add files. Total batch size would exceed {max_batch}.')
                 return redirect(url_for('main.batch_result'))
                 
             session['batch_files'] = current_batch + saved_filenames
@@ -91,9 +92,50 @@ def result(filename):
 @main.route('/download/<filename>')
 def download(filename):
     file_path = ImageHandler.get_path(filename)
-    if os.path.exists(file_path):
-        return send_file(file_path, as_attachment=True)
-    return "File not found", 404
+    if not os.path.exists(file_path):
+        return "File not found", 404
+    
+    # Check for quality param
+    try:
+        quality = int(request.args.get('quality', 100))
+    except (ValueError, TypeError):
+        quality = 100
+        
+    if quality < 100:
+        # Compress on the fly
+        try:
+            from PIL import Image
+            import io
+            
+            # Use ExifManager logic to compress but keep EXIF? 
+            # If user selected compression in "Purify", they removed EXIF.
+            # If they just want to download compressed, let's keep EXIF but compress.
+            
+            img_io = io.BytesIO()
+            with Image.open(file_path) as img:
+                # Basic save to IO with quality
+                # Preserve format
+                fmt = img.format if img.format else 'JPEG'
+                if fmt == 'JPEG':
+                     # Keep EXIF if present
+                     exif = img.info.get('exif')
+                     if exif:
+                         img.save(img_io, fmt, quality=quality, exif=exif)
+                     else:
+                         img.save(img_io, fmt, quality=quality)
+                else:
+                    # PNG/WEBP etc
+                    img.save(img_io, fmt, quality=quality)
+            
+            img_io.seek(0)
+            return send_file(img_io, as_attachment=True, download_name=filename, mimetype=f'image/{fmt.lower()}')
+            
+        except Exception as e:
+            current_app.logger.error(f"Error compressing for download: {e}")
+            # Fallback to original
+            return send_file(file_path, as_attachment=True)
+            
+    return send_file(file_path, as_attachment=True)
 
 @main.route('/delete_selected/<filename>', methods=['POST'])
 def delete_selected(filename):
@@ -128,7 +170,12 @@ def purify(filename):
         flash('File not found')
         return redirect(url_for('main.index'))
     
-    purified_path = ExifManager.remove_exif(file_path)
+    try:
+        quality = int(request.form.get('quality', current_app.config['IMAGE_QUALITY']))
+    except ValueError:
+        quality = current_app.config['IMAGE_QUALITY']
+
+    purified_path = ExifManager.remove_exif(file_path, quality=quality)
     if purified_path:
         purified_filename = os.path.basename(purified_path)
         if purified_filename != filename:
@@ -157,8 +204,13 @@ def apply_template(filename):
     if not kept_tags:
         flash('Invalid template')
         return redirect(url_for('main.result', filename=filename))
+    
+    try:
+        quality = int(request.form.get('quality', current_app.config['IMAGE_QUALITY']))
+    except ValueError:
+        quality = current_app.config['IMAGE_QUALITY']
         
-    optimized_path = ExifManager.keep_only_tags(file_path, kept_tags)
+    optimized_path = ExifManager.keep_only_tags(file_path, kept_tags, quality=quality)
     
     if optimized_path:
         optimized_filename = os.path.basename(optimized_path)
@@ -211,6 +263,37 @@ def edit(filename):
         return redirect(url_for('main.result', filename=modified_filename))
     
     flash('Error updating metadata')
+    return redirect(url_for('main.result', filename=filename))
+
+from app.services.watermark_manager import WatermarkManager
+
+@main.route('/watermark/<filename>', methods=['POST'])
+def watermark(filename):
+    trigger_bg_cleanup()
+    file_path = ImageHandler.get_path(filename)
+    if not os.path.exists(file_path):
+        flash('File not found')
+        return redirect(url_for('main.index'))
+    
+    text = request.form.get('watermark_text')
+    position = request.form.get('watermark_position', 'center')
+    opacity = float(request.form.get('watermark_opacity', 0.5))
+    
+    if not text:
+        flash('Watermark text is required')
+        return redirect(url_for('main.result', filename=filename))
+        
+    watermarked_path = WatermarkManager.apply_watermark(file_path, text, position, opacity)
+    
+    if watermarked_path:
+        watermarked_filename = os.path.basename(watermarked_path)
+        if watermarked_filename != filename:
+            ImageHandler.delete_file(filename)
+            
+        flash('Watermark applied successfully!')
+        return redirect(url_for('main.result', filename=watermarked_filename))
+        
+    flash('Error applying watermark')
     return redirect(url_for('main.result', filename=filename))
 
 # --- Batch Routes ---

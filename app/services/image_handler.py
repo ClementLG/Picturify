@@ -5,9 +5,14 @@ from werkzeug.utils import secure_filename
 from flask import current_app
 import time
 from PIL import Image
-import imghdr
+
 
 logger = logging.getLogger(__name__)
+
+import pillow_heif
+
+# Register HEIF opener
+pillow_heif.register_heif_opener()
 
 class ImageHandler:
     @staticmethod
@@ -20,41 +25,60 @@ class ImageHandler:
         if not file or not ImageHandler.allowed_file(file.filename):
             return None
         
-        # Basic Magic Number Check
-        try:
-            header = file.read(512)
-            file.seek(0)
-            if not imghdr.what(None, header):
-                logger.error("Invalid image format (magic number check failed)")
-                return None
-        except Exception as e:
-            logger.error(f"Error reading file header: {e}")
-            return None
-
+        # Basic Magic Number Check (Skipped for HEIC as imghdr doesn't support it well)
+        # We rely on PIL to verify it later
+        
         ImageHandler.enforce_storage_limit()
         
         filename = secure_filename(file.filename)
-        # Create a unique filename to avoid collisions
-        unique_filename = f"{uuid.uuid4().hex}_{filename}"
-        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
+        ext = filename.rsplit('.', 1)[1].lower()
         
-        try:
-            file.save(file_path)
+        # Create a unique filename
+        unique_id = uuid.uuid4().hex
+        
+        if ext in ['heic', 'heif']:
+            # Convert to JPG
+            filename = f"{filename.rsplit('.', 1)[0]}.jpg"
+            unique_filename = f"{unique_id}_{filename}"
+            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
             
-            # Deep Verification using PIL
             try:
-                with Image.open(file_path) as img:
-                    img.verify()
+                # Save temp heic
+                temp_path = os.path.join(current_app.config['UPLOAD_FOLDER'], f"{unique_id}_temp.{ext}")
+                file.save(temp_path)
+                
+                with Image.open(temp_path) as img:
+                    img.convert('RGB').save(file_path, 'JPEG', quality=95)
+                
+                # Remove temp file
+                os.remove(temp_path)
+                
             except Exception as e:
-                logger.error(f"Invalid image file (PIL verification failed): {e}")
-                if os.path.exists(file_path):
-                    os.remove(file_path)
+                logger.error(f"Error converting HEIC: {e}")
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                return None
+        else:
+            unique_filename = f"{unique_id}_{filename}"
+            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
+            
+            try:
+                file.save(file_path)
+            except Exception as e:
+                logger.error(f"Error saving file: {e}")
                 return None
 
-            return unique_filename
+        # Deep Verification using PIL
+        try:
+            with Image.open(file_path) as img:
+                img.verify()
         except Exception as e:
-            logger.error(f"Error saving file: {e}")
+            logger.error(f"Invalid image file (PIL verification failed): {e}")
+            if os.path.exists(file_path):
+                os.remove(file_path)
             return None
+
+        return unique_filename
 
     @staticmethod
     def get_path(filename):
@@ -95,7 +119,6 @@ class ImageHandler:
         
         # Calculate how many to remove. 
         # We want to remove enough so that after adding 1 new file, we are still within limit.
-        # But broadly, if current >= max, remove (current - max + 1)
         num_to_remove = len(files) - max_files + 1
         
         for i in range(num_to_remove):
@@ -126,7 +149,6 @@ class ImageHandler:
             
             # If we have too many files, just check a random sample of them (e.g. 50)
             # This ensures we don't block for long even if there are 10,000 files.
-            # Over time, everything gets cleaned.
             import random
             if len(files) > 50:
                 files = random.sample(files, 50)

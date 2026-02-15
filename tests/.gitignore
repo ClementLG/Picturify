@@ -1,0 +1,6 @@
+
+# Ignore test artifacts
+uploads/
+processed/
+test_report.json
+__pycache__/
