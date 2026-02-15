@@ -18,7 +18,11 @@ class WatermarkManager:
             dest_path = os.path.join(dir_name, f"watermarked_{file_name}")
 
         try:
-            with Image.open(source_path).convert("RGBA") as base:
+            with Image.open(source_path) as base:
+                # Capture EXIF data before converting
+                exif_data = base.info.get("exif")
+                
+                base = base.convert("RGBA")
                 # Make a blank image for the text, initialized to transparent text color
                 txt = Image.new("RGBA", base.size, (255, 255, 255, 0))
 
@@ -69,11 +73,15 @@ class WatermarkManager:
                 out = Image.alpha_composite(base, txt)
 
                 # Save as RGB (removing alpha channel)
-                out.convert("RGB").save(
-                    dest_path, 
-                    quality=current_app.config['IMAGE_QUALITY'], 
-                    subsampling=current_app.config['IMAGE_SUBSAMPLING']
-                )
+                save_kwargs = {
+                    "quality": current_app.config['IMAGE_QUALITY'],
+                    "subsampling": current_app.config['IMAGE_SUBSAMPLING']
+                }
+                
+                if exif_data:
+                    save_kwargs["exif"] = exif_data
+
+                out.convert("RGB").save(dest_path, **save_kwargs)
                 
                 return dest_path
         except Exception as e:
