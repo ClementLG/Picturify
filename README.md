@@ -21,6 +21,11 @@
 
 Built with **Flask** and **Bulma**, the application provides a modern interface for both single-file analysis and bulk operations.
 
+<p align="center">
+  <img src="imgs/demo/home.png" alt="Home Screen" width="45%">
+  <img src="imgs/demo/edition.png" alt="Edition Screen" width="45%">
+</p>
+
 ## Features
 
 ### Batch Processing
