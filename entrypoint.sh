@@ -5,5 +5,5 @@ if [ "$FLASK_ENV" = "development" ]; then
     exec python run.py
 else
     echo "Starting in PRODUCTION mode with Gunicorn..."
-    exec gunicorn --bind 0.0.0.0:5000 --workers 4 --threads 4 --worker-class gthread --timeout 120 --log-level debug run:app
+    exec gunicorn --bind 0.0.0.0:5000 --workers 4 --threads 4 --worker-class gthread --timeout 120 run:app
 fi
